@@ -4,8 +4,13 @@
 
 pub mod action;
 pub mod app;
+pub mod builder;
 pub mod components;
-pub mod executor;
+pub mod config;
 pub mod event;
+pub mod executor;
+pub mod host;
+pub mod runtime;
+pub mod schema;
 pub mod showcase;
 pub mod tui;

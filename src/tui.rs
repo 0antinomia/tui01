@@ -66,8 +66,7 @@ pub fn init_panic_hook() {
 /// 检查终端是否满足最小尺寸要求
 /// 如果太小或宽高比异常，返回 Err 并附带错误信息
 pub fn check_minimum_size() -> Result<(), String> {
-    let (width, height) = terminal_size()
-        .map_err(|e| format!("无法获取终端尺寸: {}", e))?;
+    let (width, height) = terminal_size().map_err(|e| format!("无法获取终端尺寸: {}", e))?;
 
     if width < MIN_WIDTH || height < MIN_HEIGHT {
         Err(format!(

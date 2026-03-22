@@ -19,7 +19,6 @@ pub enum ControlKind {
     StaticData(DataDisplayControl),
     DynamicData(DataDisplayControl),
     LogOutput(LogOutputControl),
-    StaticText(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,7 +39,6 @@ impl ControlKind {
             Self::ActionButton(_) => 16,
             Self::StaticData(_) | Self::DynamicData(_) => 24,
             Self::LogOutput(_) => 36,
-            Self::StaticText(text) => text.chars().count().min(22) as u16,
         }
     }
 
@@ -61,12 +59,6 @@ impl ControlKind {
             Self::StaticData(control) => control.render(area, buf, false, false, false),
             Self::DynamicData(control) => control.render(area, buf, true, false, false),
             Self::LogOutput(control) => control.render(area, buf, selected, active),
-            Self::StaticText(text) => {
-                let widget = Paragraph::new(text.as_str())
-                    .alignment(Alignment::Center)
-                    .style(Style::default().fg(Color::Cyan));
-                Widget::render(widget, area, buf);
-            }
         }
     }
 
@@ -78,7 +70,6 @@ impl ControlKind {
             Self::Toggle(control) => control.handle_key(key),
             Self::ActionButton(control) => control.handle_key(key),
             Self::StaticData(_) | Self::DynamicData(_) | Self::LogOutput(_) => false,
-            Self::StaticText(_) => false,
         }
     }
 }
@@ -446,14 +437,7 @@ impl DataDisplayControl {
         }
     }
 
-    fn render(
-        &self,
-        area: Rect,
-        buf: &mut Buffer,
-        dynamic: bool,
-        selected: bool,
-        active: bool,
-    ) {
+    fn render(&self, area: Rect, buf: &mut Buffer, dynamic: bool, selected: bool, active: bool) {
         let area = left_aligned_control_rect(area, 24);
         if area.width <= 2 || area.height == 0 {
             return;
@@ -826,8 +810,7 @@ fn render_feedback_marker(buf: &mut Buffer, area: Rect, feedback: ControlFeedbac
     let (symbol, color) = match feedback {
         ControlFeedback::Idle => ("", Color::White),
         ControlFeedback::Running(frame) => {
-            const FRAMES: [&str; 10] =
-                ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+            const FRAMES: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
             (FRAMES[frame % FRAMES.len()], Color::Cyan)
         }
         ControlFeedback::Success => ("✓", Color::Green),
@@ -885,7 +868,10 @@ mod tests {
     #[test]
     fn log_output_append_moves_scroll_to_bottom() {
         let mut control = super::LogOutputControl::new(
-            (0..24).map(|i| format!("line-{i}")).collect::<Vec<_>>().join("\n"),
+            (0..24)
+                .map(|i| format!("line-{i}"))
+                .collect::<Vec<_>>()
+                .join("\n"),
         );
         assert_eq!(control.scroll_offset, 0);
 

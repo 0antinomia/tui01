@@ -1,0 +1,105 @@
+return {
+  title_text = "TUI01 From Lua\n\n这个示例完全从 Lua 配置加载。",
+  status_controls = table.concat({
+    "Controls:",
+    "↑/↓ 或 j/k 当前焦点内移动",
+    "Shift+J/K 当前焦点区域翻页",
+    "Enter / l 进入或确认",
+    "Esc / h 返回",
+    "q 退出",
+  }, "\n"),
+  screens = {
+    {
+      title = "Workspace",
+      page = {
+        title = "Workspace",
+        sections = {
+          {
+            title = "基础配置",
+            fields = {
+              {
+                label = "项目名",
+                control = {
+                  type = "text_input",
+                  value = "tui01",
+                  placeholder = "输入项目名",
+                },
+              },
+              {
+                label = "端口",
+                control = {
+                  type = "number_input",
+                  value = "3000",
+                  placeholder = "输入端口",
+                },
+              },
+              {
+                label = "启用缓存",
+                control = {
+                  type = "toggle",
+                  on = true,
+                },
+              },
+            },
+          },
+          {
+            title = "操作",
+            fields = {
+              {
+                label = "刷新工作区",
+                id = "refresh_workspace",
+                control = {
+                  type = "refresh_button",
+                  button_label = "刷新",
+                },
+                operation = {
+                  kind = "shell",
+                  command = "printf 'workspace refreshed\\n'",
+                  result_target = "workspace_log",
+                },
+              },
+              {
+                label = "输出",
+                id = "workspace_log",
+                height_units = 4,
+                control = {
+                  type = "log_output",
+                  content = "等待执行结果",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    {
+      title = "Settings",
+      page = {
+        title = "Settings",
+        sections = {
+          {
+            title = "展示",
+            fields = {
+              {
+                label = "主题",
+                control = {
+                  type = "select",
+                  options = { "Classic", "Ocean", "Mono" },
+                  selected = 1,
+                },
+              },
+              {
+                label = "边框",
+                control = {
+                  type = "select",
+                  options = { "Rounded", "Plain" },
+                  selected = 0,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+}

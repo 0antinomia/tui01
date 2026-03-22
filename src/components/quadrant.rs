@@ -113,12 +113,16 @@ impl Component for QuadrantLayout {
 
         // 绘制垂直分割线（│）
         for y in inner_y..inner_y + inner_height {
-            f.buffer_mut()[(vertical_divider_x, y)].set_char('│').set_fg(Color::Blue);
+            f.buffer_mut()[(vertical_divider_x, y)]
+                .set_char('│')
+                .set_fg(Color::Blue);
         }
 
         // 绘制水平分割线（─）
         for x in inner_x..inner_x + inner_width {
-            f.buffer_mut()[(x, horizontal_divider_y)].set_char('─').set_fg(Color::Blue);
+            f.buffer_mut()[(x, horizontal_divider_y)]
+                .set_char('─')
+                .set_fg(Color::Blue);
         }
 
         // 绘制中心交叉点（┼）
@@ -129,19 +133,27 @@ impl Component for QuadrantLayout {
         // 修复与外边框的交叉点
         // 顶部交叉点（┬）
         if inner_y > layout_rect.y {
-            f.buffer_mut()[(vertical_divider_x, inner_y - 1)].set_char('┬').set_fg(Color::Blue);
+            f.buffer_mut()[(vertical_divider_x, inner_y - 1)]
+                .set_char('┬')
+                .set_fg(Color::Blue);
         }
         // 底部交叉点（┴）
         if inner_y + inner_height < layout_rect.y + layout_rect.height {
-            f.buffer_mut()[(vertical_divider_x, inner_y + inner_height)].set_char('┴').set_fg(Color::Blue);
+            f.buffer_mut()[(vertical_divider_x, inner_y + inner_height)]
+                .set_char('┴')
+                .set_fg(Color::Blue);
         }
         // 左侧交叉点（├）
         if inner_x > layout_rect.x {
-            f.buffer_mut()[(inner_x - 1, horizontal_divider_y)].set_char('├').set_fg(Color::Blue);
+            f.buffer_mut()[(inner_x - 1, horizontal_divider_y)]
+                .set_char('├')
+                .set_fg(Color::Blue);
         }
         // 右侧交叉点（┤）
         if inner_x + inner_width < layout_rect.x + layout_rect.width {
-            f.buffer_mut()[(inner_x + inner_width, horizontal_divider_y)].set_char('┤').set_fg(Color::Blue);
+            f.buffer_mut()[(inner_x + inner_width, horizontal_divider_y)]
+                .set_char('┤')
+                .set_fg(Color::Blue);
         }
     }
 }

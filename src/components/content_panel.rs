@@ -1,439 +1,105 @@
 //! 右下内容区域组件
 
-use crate::components::{
-    ActionButtonControl, Component, ControlFeedback, ControlKind, DataDisplayControl,
-    LogOutputControl, NumberInputControl, SelectControl, TextInputControl, ToggleControl,
-};
-use crate::executor::{OperationRequest, OperationResult};
+use crate::components::{Component, ControlFeedback, ControlKind};
 use crate::event::Key;
+use crate::executor::{
+    OperationRequest, OperationResult, OperationSource as ExecutorOperationSource,
+};
+use crate::runtime::{
+    ContentBlock, ContentBlueprint, ContentControl, ContentRuntimeState, OperationSource,
+    OperationStatus,
+};
 use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
     widgets::Paragraph,
     Frame,
 };
-use std::time::Instant;
+use std::collections::HashMap;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ContentBlueprint {
-    pub title: String,
-    pub sections: Vec<ContentSection>,
-}
-
-impl ContentBlueprint {
-    pub fn new(title: impl Into<String>) -> Self {
-        Self {
-            title: title.into(),
-            sections: Vec::new(),
+fn render_control(
+    control: &ContentControl,
+    area: Rect,
+    buf: &mut ratatui::buffer::Buffer,
+    selected: bool,
+    active: bool,
+    feedback: ControlFeedback,
+) {
+    match control {
+        ContentControl::TextInput(control) => {
+            ControlKind::TextInput(control.clone()).render(area, buf, selected, active, feedback)
         }
-    }
-
-    pub fn with_sections(mut self, sections: Vec<ContentSection>) -> Self {
-        self.sections = sections;
-        self
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ContentSection {
-    pub subtitle: String,
-    pub blocks: Vec<ContentBlock>,
-}
-
-impl ContentSection {
-    pub fn new(subtitle: impl Into<String>) -> Self {
-        Self {
-            subtitle: subtitle.into(),
-            blocks: Vec::new(),
+        ContentControl::NumberInput(control) => {
+            ControlKind::NumberInput(control.clone()).render(area, buf, selected, active, feedback)
         }
-    }
-
-    pub fn with_blocks(mut self, blocks: Vec<ContentBlock>) -> Self {
-        self.blocks = blocks;
-        self
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ContentBlock {
-    pub id: Option<String>,
-    pub label: String,
-    pub control: ContentControl,
-    pub height_units: u16,
-    pub operation: Option<OperationSpec>,
-    pub status: OperationStatus,
-}
-
-impl ContentBlock {
-    pub fn description(text: impl Into<String>) -> Self {
-        Self {
-            id: None,
-            label: text.into(),
-            control: ContentControl::StaticText(String::new()),
-            height_units: 1,
-            operation: None,
-            status: OperationStatus::Idle,
+        ContentControl::Select(control) => {
+            ControlKind::Select(control.clone()).render(area, buf, selected, active, feedback)
         }
-    }
-
-    pub fn text_input(
-        label: impl Into<String>,
-        value: impl Into<String>,
-        placeholder: impl Into<String>,
-    ) -> Self {
-        Self {
-            id: None,
-            label: label.into(),
-            control: ContentControl::TextInput(TextInputControl::new(value, placeholder)),
-            height_units: 1,
-            operation: None,
-            status: OperationStatus::Idle,
+        ContentControl::Toggle(control) => {
+            ControlKind::Toggle(control.clone()).render(area, buf, selected, active, feedback)
         }
-    }
-
-    pub fn select(
-        label: impl Into<String>,
-        options: impl IntoIterator<Item = impl Into<String>>,
-        selected: usize,
-    ) -> Self {
-        Self {
-            id: None,
-            label: label.into(),
-            control: ContentControl::Select(SelectControl::new(options, selected)),
-            height_units: 1,
-            operation: None,
-            status: OperationStatus::Idle,
+        ContentControl::ActionButton(control) => {
+            ControlKind::ActionButton(control.clone()).render(area, buf, selected, active, feedback)
         }
-    }
-
-    pub fn toggle(label: impl Into<String>, on: bool) -> Self {
-        Self {
-            id: None,
-            label: label.into(),
-            control: ContentControl::Toggle(ToggleControl::new(on)),
-            height_units: 1,
-            operation: None,
-            status: OperationStatus::Idle,
+        ContentControl::StaticData(control) => {
+            ControlKind::StaticData(control.clone()).render(area, buf, selected, active, feedback)
         }
-    }
-
-    pub fn number_input(
-        label: impl Into<String>,
-        value: impl Into<String>,
-        placeholder: impl Into<String>,
-    ) -> Self {
-        Self {
-            id: None,
-            label: label.into(),
-            control: ContentControl::NumberInput(NumberInputControl::new(value, placeholder)),
-            height_units: 1,
-            operation: None,
-            status: OperationStatus::Idle,
+        ContentControl::DynamicData(control) => {
+            ControlKind::DynamicData(control.clone()).render(area, buf, selected, active, feedback)
         }
-    }
-
-    pub fn action_button(label: impl Into<String>, button_label: impl Into<String>) -> Self {
-        Self {
-            id: None,
-            label: label.into(),
-            control: ContentControl::ActionButton(ActionButtonControl::new(button_label)),
-            height_units: 1,
-            operation: None,
-            status: OperationStatus::Idle,
-        }
-    }
-
-    pub fn refresh_button(label: impl Into<String>, button_label: impl Into<String>) -> Self {
-        Self {
-            id: None,
-            label: label.into(),
-            control: ContentControl::ActionButton(ActionButtonControl::refresh(button_label)),
-            height_units: 1,
-            operation: None,
-            status: OperationStatus::Idle,
-        }
-    }
-
-    pub fn static_data(label: impl Into<String>, value: impl Into<String>) -> Self {
-        Self {
-            id: None,
-            label: label.into(),
-            control: ContentControl::StaticData(DataDisplayControl::new(value)),
-            height_units: 1,
-            operation: None,
-            status: OperationStatus::Idle,
-        }
-    }
-
-    pub fn dynamic_data(label: impl Into<String>, value: impl Into<String>) -> Self {
-        Self {
-            id: None,
-            label: label.into(),
-            control: ContentControl::DynamicData(DataDisplayControl::new(value)),
-            height_units: 1,
-            operation: None,
-            status: OperationStatus::Idle,
-        }
-    }
-
-    pub fn log_output(label: impl Into<String>, content: impl Into<String>) -> Self {
-        Self {
-            id: None,
-            label: label.into(),
-            control: ContentControl::LogOutput(LogOutputControl::new(content)),
-            height_units: 4,
-            operation: None,
-            status: OperationStatus::Idle,
-        }
-    }
-
-    pub fn static_text(label: impl Into<String>, value: impl Into<String>) -> Self {
-        Self {
-            id: None,
-            label: label.into(),
-            control: ContentControl::StaticText(value.into()),
-            height_units: 1,
-            operation: None,
-            status: OperationStatus::Idle,
-        }
-    }
-
-    pub fn with_toggle_labels(
-        mut self,
-        on_label: impl Into<String>,
-        off_label: impl Into<String>,
-    ) -> Self {
-        if let ContentControl::Toggle(toggle) = &mut self.control {
-            *toggle = toggle.clone().labels(on_label, off_label);
-        }
-        self
-    }
-
-    pub fn with_id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
-        self
-    }
-
-    pub fn with_height_units(mut self, height_units: u16) -> Self {
-        self.height_units = height_units.max(1);
-        self
-    }
-
-    pub fn with_operation_success(mut self, duration_ms: u64) -> Self {
-        let target = self.operation.as_ref().and_then(|spec| spec.result_target.clone());
-        let mut spec = OperationSpec::simulated_success(duration_ms);
-        spec.result_target = target;
-        self.operation = Some(spec);
-        self
-    }
-
-    pub fn with_operation_failure(mut self, duration_ms: u64) -> Self {
-        let target = self.operation.as_ref().and_then(|spec| spec.result_target.clone());
-        let mut spec = OperationSpec::simulated_failure(duration_ms);
-        spec.result_target = target;
-        self.operation = Some(spec);
-        self
-    }
-
-    pub fn with_shell_command(mut self, command: impl Into<String>) -> Self {
-        let target = self.operation.as_ref().and_then(|spec| spec.result_target.clone());
-        let mut spec = OperationSpec::shell(command);
-        spec.result_target = target;
-        self.operation = Some(spec);
-        self
-    }
-
-    pub fn with_result_target(mut self, target_id: impl Into<String>) -> Self {
-        let target_id = target_id.into();
-        let spec = self.operation.get_or_insert_with(|| OperationSpec::shell("true"));
-        spec.result_target = Some(target_id);
-        self
-    }
-
-    fn row_height(&self) -> usize {
-        self.height_units.max(1) as usize * 3
-    }
-
-    fn start_operation(
-        &mut self,
-        operation_id: u64,
-        screen_index: usize,
-        block_index: usize,
-    ) -> Option<OperationRequest> {
-        let original_control = self.control.clone();
-        let pending_control = self.control.clone();
-        self.start_operation_with_controls(
-            operation_id,
-            screen_index,
-            block_index,
-            original_control,
-            pending_control,
-        )
-    }
-
-    fn start_operation_with_controls(
-        &mut self,
-        operation_id: u64,
-        screen_index: usize,
-        block_index: usize,
-        original_control: ContentControl,
-        pending_control: ContentControl,
-    ) -> Option<OperationRequest> {
-        let Some(spec) = self.operation.clone() else {
-            return None;
-        };
-
-        self.status = OperationStatus::Running {
-            operation_id,
-            started_at: Instant::now(),
-            original_control,
-            pending_control: pending_control.clone(),
-        };
-        Some(OperationRequest {
-            operation_id,
-            screen_index,
-            block_index,
-            command: spec.command,
-            result_target: spec.result_target,
-        })
-    }
-
-    fn is_running(&self) -> bool {
-        matches!(self.status, OperationStatus::Running { .. })
-    }
-
-    fn apply_operation_result(&mut self, result: &OperationResult) {
-        let OperationStatus::Running {
-            operation_id,
-            ref original_control,
-            ref pending_control,
-            ..
-        } = self.status
-        else {
-            return;
-        };
-
-        if operation_id != result.operation_id {
-            return;
-        }
-
-        if result.success {
-            self.control = pending_control.clone();
-            self.status = OperationStatus::Success;
-        } else {
-            self.control = original_control.clone();
-            self.status = OperationStatus::Failure;
+        ContentControl::LogOutput(control) => {
+            ControlKind::LogOutput(control.clone()).render(area, buf, selected, active, feedback)
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OperationSpec {
-    pub command: String,
-    pub result_target: Option<String>,
+fn handle_control_key(control: &mut ContentControl, key: Key) -> bool {
+    match control {
+        ContentControl::TextInput(control) => control.handle_key(key),
+        ContentControl::NumberInput(control) => control.handle_key(key),
+        ContentControl::Select(control) => control.handle_key(key),
+        ContentControl::Toggle(control) => control.handle_key(key),
+        ContentControl::ActionButton(control) => control.handle_key(key),
+        ContentControl::StaticData(_)
+        | ContentControl::DynamicData(_)
+        | ContentControl::LogOutput(_) => false,
+    }
 }
 
-impl OperationSpec {
-    pub fn shell(command: impl Into<String>) -> Self {
-        Self {
-            command: command.into(),
-            result_target: None,
+fn control_value(control: &ContentControl) -> String {
+    match control {
+        ContentControl::TextInput(control) => control.value.clone(),
+        ContentControl::NumberInput(control) => control.value.clone(),
+        ContentControl::Select(control) => control
+            .options
+            .get(control.selected)
+            .cloned()
+            .unwrap_or_default(),
+        ContentControl::Toggle(control) => control.on.to_string(),
+        ContentControl::ActionButton(control) => control.label.clone(),
+        ContentControl::StaticData(control) | ContentControl::DynamicData(control) => {
+            control.value.clone()
+        }
+        ContentControl::LogOutput(control) => control.content.clone(),
+    }
+}
+
+fn scope_slug(value: &str) -> String {
+    let mut slug = String::new();
+    let mut last_was_sep = false;
+
+    for ch in value.chars() {
+        if ch.is_ascii_alphanumeric() {
+            slug.push(ch.to_ascii_lowercase());
+            last_was_sep = false;
+        } else if !last_was_sep {
+            slug.push('_');
+            last_was_sep = true;
         }
     }
 
-    pub fn simulated_success(duration_ms: u64) -> Self {
-        let seconds = duration_ms as f64 / 1000.0;
-        Self::shell(format!(
-            "sleep {seconds:.3}; printf '操作成功\\n'; exit 0"
-        ))
-    }
-
-    pub fn simulated_failure(duration_ms: u64) -> Self {
-        let seconds = duration_ms as f64 / 1000.0;
-        Self::shell(format!(
-            "sleep {seconds:.3}; printf '操作失败\\n' >&2; exit 1"
-        ))
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum OperationStatus {
-    Idle,
-    Running {
-        operation_id: u64,
-        started_at: Instant,
-        original_control: ContentControl,
-        pending_control: ContentControl,
-    },
-    Success,
-    Failure,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ContentControl {
-    TextInput(TextInputControl),
-    NumberInput(NumberInputControl),
-    Select(SelectControl),
-    Toggle(ToggleControl),
-    ActionButton(ActionButtonControl),
-    StaticData(DataDisplayControl),
-    DynamicData(DataDisplayControl),
-    LogOutput(LogOutputControl),
-    StaticText(String),
-}
-
-impl ContentControl {
-    fn render(
-        &self,
-        area: Rect,
-        buf: &mut ratatui::buffer::Buffer,
-        selected: bool,
-        active: bool,
-        feedback: ControlFeedback,
-    ) {
-        match self {
-            Self::TextInput(control) => {
-                ControlKind::TextInput(control.clone()).render(area, buf, selected, active, feedback)
-            }
-            Self::NumberInput(control) => ControlKind::NumberInput(control.clone()).render(
-                area, buf, selected, active, feedback,
-            ),
-            Self::Select(control) => {
-                ControlKind::Select(control.clone()).render(area, buf, selected, active, feedback)
-            }
-            Self::Toggle(control) => {
-                ControlKind::Toggle(control.clone()).render(area, buf, selected, active, feedback)
-            }
-            Self::ActionButton(control) => ControlKind::ActionButton(control.clone()).render(
-                area, buf, selected, active, feedback,
-            ),
-            Self::StaticData(control) => {
-                ControlKind::StaticData(control.clone()).render(area, buf, selected, active, feedback)
-            }
-            Self::DynamicData(control) => ControlKind::DynamicData(control.clone()).render(
-                area, buf, selected, active, feedback,
-            ),
-            Self::LogOutput(control) => {
-                ControlKind::LogOutput(control.clone()).render(area, buf, selected, active, feedback)
-            }
-            Self::StaticText(text) => {
-                ControlKind::StaticText(text.clone()).render(area, buf, selected, active, feedback)
-            }
-        }
-    }
-
-    fn handle_key(&mut self, key: Key) -> bool {
-        match self {
-            Self::TextInput(control) => control.handle_key(key),
-            Self::NumberInput(control) => control.handle_key(key),
-            Self::Select(control) => control.handle_key(key),
-            Self::Toggle(control) => control.handle_key(key),
-            Self::ActionButton(control) => control.handle_key(key),
-            Self::StaticData(_) | Self::DynamicData(_) | Self::LogOutput(_) => false,
-            Self::StaticText(_) => false,
-        }
-    }
+    slug.trim_matches('_').to_string()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -458,7 +124,6 @@ enum SelectedControlKind {
     StaticData,
     DynamicData,
     LogOutput,
-    StaticText,
 }
 
 impl VisibleBlock {
@@ -469,12 +134,9 @@ impl VisibleBlock {
 
 pub struct ContentPanel {
     blueprint: ContentBlueprint,
-    current_page: usize,
-    selected_block: usize,
+    runtime: ContentRuntimeState,
     focused: bool,
     control_active: bool,
-    control_snapshot: Option<ContentControl>,
-    spinner_tick: usize,
 }
 
 impl ContentPanel {
@@ -487,12 +149,9 @@ impl ContentPanel {
     pub fn new() -> Self {
         Self {
             blueprint: ContentBlueprint::new(""),
-            current_page: 0,
-            selected_block: 0,
+            runtime: ContentRuntimeState::default(),
             focused: false,
             control_active: false,
-            control_snapshot: None,
-            spinner_tick: 0,
         }
     }
 
@@ -501,70 +160,40 @@ impl ContentPanel {
         self.blueprint = blueprint;
 
         if content_changed {
-            self.clear_all_statuses();
-            self.current_page = 0;
-            self.selected_block = 0;
+            self.runtime = ContentRuntimeState::from_blueprint(&self.blueprint);
             self.control_active = false;
-            self.control_snapshot = None;
-            self.spinner_tick = 0;
         }
     }
 
-    pub fn blueprint(&self) -> &ContentBlueprint {
-        &self.blueprint
-    }
-
-    pub fn set_content(
-        &mut self,
-        title: impl Into<String>,
-        summary: impl Into<String>,
-        notes: impl IntoIterator<Item = impl Into<String>>,
-    ) {
-        let title = title.into();
-        let summary = summary.into();
-        let notes: Vec<String> = notes.into_iter().map(Into::into).collect();
-
-        let mut sections = Vec::new();
-        if !summary.trim().is_empty() {
-            sections.push(
-                ContentSection::new("概览")
-                    .with_blocks(vec![ContentBlock::description(summary.clone())]),
-            );
+    pub fn blueprint(&self) -> ContentBlueprint {
+        let mut snapshot = self.blueprint.clone();
+        let mut index = 0usize;
+        for section in &mut snapshot.sections {
+            for block in &mut section.blocks {
+                if let Some(control) = self.block_control(index) {
+                    block.control = control.clone();
+                }
+                index += 1;
+            }
         }
-
-        if !notes.is_empty() {
-            sections.push(ContentSection::new("细项").with_blocks(
-                notes.into_iter().map(ContentBlock::description).collect(),
-            ));
-        }
-
-        if sections.is_empty() {
-            sections.push(
-                ContentSection::new("概览")
-                    .with_blocks(vec![ContentBlock::description("当前没有可展示内容")]),
-            );
-        }
-
-        self.set_blueprint(ContentBlueprint::new(title).with_sections(sections));
+        snapshot
     }
 
     pub fn next_page(&mut self, width: u16, height: u16) {
         let total_pages = self.total_pages(width, height);
-        if self.current_page + 1 < total_pages {
+        if self.runtime.current_page + 1 < total_pages {
             self.clear_all_statuses();
-            self.current_page += 1;
+            self.runtime.current_page += 1;
             self.control_active = false;
-            self.control_snapshot = None;
             self.clamp_selection_to_page(height);
         }
     }
 
     pub fn previous_page(&mut self) {
-        if self.current_page > 0 {
+        if self.runtime.current_page > 0 {
             self.clear_all_statuses();
-            self.current_page -= 1;
+            self.runtime.current_page -= 1;
             self.control_active = false;
-            self.control_snapshot = None;
         }
     }
 
@@ -574,11 +203,11 @@ impl ContentPanel {
     }
 
     pub fn current_page(&self) -> usize {
-        self.current_page
+        self.runtime.current_page
     }
 
     pub fn selected_block(&self) -> usize {
-        self.selected_block
+        self.runtime.selected_block
     }
 
     pub fn has_selectable_blocks(&self, height: u16) -> bool {
@@ -586,15 +215,11 @@ impl ContentPanel {
     }
 
     pub fn tick(&mut self) {
-        self.spinner_tick = self.spinner_tick.wrapping_add(1);
+        self.runtime.spinner_tick = self.runtime.spinner_tick.wrapping_add(1);
     }
 
     fn clear_all_statuses(&mut self) {
-        for section in &mut self.blueprint.sections {
-            for block in &mut section.blocks {
-                block.status = OperationStatus::Idle;
-            }
-        }
+        self.runtime.clear_statuses();
     }
 
     pub fn ensure_visible_selection(&mut self, height: u16) {
@@ -603,15 +228,15 @@ impl ContentPanel {
 
     pub fn handle_control_key(&mut self, key: Key) -> bool {
         if self
-            .selected_block_ref()
-            .map(|block| block.is_running())
+            .selected_block_state()
+            .map(|state| matches!(state.status, OperationStatus::Running { .. }))
             .unwrap_or(false)
         {
             return false;
         }
 
-        self.selected_block_mut()
-            .map(|block| block.control.handle_key(key))
+        self.selected_block_control_mut()
+            .map(|control| handle_control_key(control, key))
             .unwrap_or(false)
     }
 
@@ -627,26 +252,23 @@ impl ContentPanel {
                 | SelectedControlKind::Select
                 | SelectedControlKind::LogOutput,
             ) => {
-                self.control_snapshot = self.selected_block_ref().map(|block| block.control.clone());
+                if let Some(state) = self.selected_block_state_mut() {
+                    state.snapshot = Some(state.control.clone());
+                }
                 self.control_active = true;
                 None
             }
             Some(SelectedControlKind::Toggle) => {
                 self.control_active = false;
-                self.control_snapshot = None;
+                self.clear_selected_snapshot();
                 self.toggle_selected_control(operation_id, screen_index)
             }
             Some(SelectedControlKind::ActionButton) => {
                 self.control_active = false;
-                self.control_snapshot = None;
+                self.clear_selected_snapshot();
                 self.start_selected_action(operation_id, screen_index)
             }
-            Some(
-                SelectedControlKind::StaticData
-                | SelectedControlKind::DynamicData
-                | SelectedControlKind::StaticText,
-            )
-            | None => None,
+            Some(SelectedControlKind::StaticData | SelectedControlKind::DynamicData) | None => None,
         }
     }
 
@@ -660,9 +282,9 @@ impl ContentPanel {
     }
 
     pub fn cancel_control(&mut self) {
-        if let Some(snapshot) = self.control_snapshot.take() {
-            if let Some(block) = self.selected_block_mut() {
-                block.control = snapshot;
+        if let Some(state) = self.selected_block_state_mut() {
+            if let Some(snapshot) = state.snapshot.take() {
+                state.control = snapshot;
             }
         }
         self.control_active = false;
@@ -691,20 +313,21 @@ impl ContentPanel {
         operation_id: u64,
         screen_index: usize,
     ) -> Option<OperationRequest> {
-        let snapshot = self.control_snapshot.take();
-        let block_index = self.selected_block;
-        let Some(block) = self.selected_block_mut() else {
+        let snapshot = self
+            .selected_block_state_mut()
+            .and_then(|state| state.snapshot.take());
+        let block_index = self.runtime.selected_block;
+        if self.block_is_running(block_index) {
+            return None;
+        }
+        let Some(block) = self.selected_block_ref() else {
             return None;
         };
 
-        if block.is_running() {
-            return None;
-        }
-
         if block.operation.is_some() {
             if let Some(original) = snapshot {
-                let pending = block.control.clone();
-                return block.start_operation_with_controls(
+                let pending = self.block_control(block_index)?.clone();
+                return self.start_operation(
                     operation_id,
                     screen_index,
                     block_index,
@@ -712,7 +335,14 @@ impl ContentPanel {
                     pending,
                 );
             }
-            return block.start_operation(operation_id, screen_index, block_index);
+            let control = self.block_control(block_index)?.clone();
+            return self.start_operation(
+                operation_id,
+                screen_index,
+                block_index,
+                control.clone(),
+                control,
+            );
         }
 
         None
@@ -723,32 +353,27 @@ impl ContentPanel {
         operation_id: u64,
         screen_index: usize,
     ) -> Option<OperationRequest> {
-        let block_index = self.selected_block;
-        let Some(block) = self.selected_block_mut() else {
+        let block_index = self.runtime.selected_block;
+        if self.block_is_running(block_index) {
+            return None;
+        }
+        let Some(block) = self.selected_block_ref() else {
             return None;
         };
 
-        if block.is_running() {
-            return None;
-        }
-
-        let mut pending = block.control.clone();
-        let changed = pending.handle_key(Key::Enter);
+        let mut pending = self.block_control(block_index)?.clone();
+        let changed = handle_control_key(&mut pending, Key::Enter);
         if !changed {
             return None;
         }
 
         if block.operation.is_some() {
-            let original = block.control.clone();
-            block.start_operation_with_controls(
-                operation_id,
-                screen_index,
-                block_index,
-                original,
-                pending,
-            )
+            let original = self.block_control(block_index)?.clone();
+            self.start_operation(operation_id, screen_index, block_index, original, pending)
         } else {
-            block.control = pending;
+            if let Some(control) = self.block_control_mut(block_index) {
+                *control = pending;
+            }
             None
         }
     }
@@ -758,16 +383,22 @@ impl ContentPanel {
         operation_id: u64,
         screen_index: usize,
     ) -> Option<OperationRequest> {
-        let block_index = self.selected_block;
-        let Some(block) = self.selected_block_mut() else {
+        let block_index = self.runtime.selected_block;
+        if self.block_is_running(block_index) {
+            return None;
+        }
+        let Some(_block) = self.selected_block_ref() else {
             return None;
         };
 
-        if block.is_running() {
-            return None;
-        }
-
-        block.start_operation(operation_id, screen_index, block_index)
+        let control = self.block_control(block_index)?.clone();
+        self.start_operation(
+            operation_id,
+            screen_index,
+            block_index,
+            control.clone(),
+            control,
+        )
     }
 
     pub fn select_next_block(&mut self, height: u16) {
@@ -776,27 +407,30 @@ impl ContentPanel {
             return;
         }
 
-        if let Some(pos) = visible.iter().position(|index| *index == self.selected_block) {
+        if let Some(pos) = visible
+            .iter()
+            .position(|index| *index == self.runtime.selected_block)
+        {
             if pos + 1 < visible.len() {
-                self.selected_block = visible[pos + 1];
+                self.runtime.selected_block = visible[pos + 1];
                 self.control_active = false;
-                self.control_snapshot = None;
+                self.clear_selected_snapshot();
             } else {
-                let current_page = self.current_page;
+                let current_page = self.runtime.current_page;
                 self.next_page(0, height);
-                if self.current_page != current_page {
+                if self.runtime.current_page != current_page {
                     let next_visible = self.current_page_block_indices(height);
                     if let Some(first) = next_visible.first() {
-                        self.selected_block = *first;
+                        self.runtime.selected_block = *first;
                         self.control_active = false;
-                        self.control_snapshot = None;
+                        self.clear_selected_snapshot();
                     }
                 }
             }
         } else {
-            self.selected_block = visible[0];
+            self.runtime.selected_block = visible[0];
             self.control_active = false;
-            self.control_snapshot = None;
+            self.clear_selected_snapshot();
         }
     }
 
@@ -806,24 +440,27 @@ impl ContentPanel {
             return;
         }
 
-        if let Some(pos) = visible.iter().position(|index| *index == self.selected_block) {
+        if let Some(pos) = visible
+            .iter()
+            .position(|index| *index == self.runtime.selected_block)
+        {
             if pos > 0 {
-                self.selected_block = visible[pos - 1];
+                self.runtime.selected_block = visible[pos - 1];
                 self.control_active = false;
-                self.control_snapshot = None;
-            } else if self.current_page > 0 {
+                self.clear_selected_snapshot();
+            } else if self.runtime.current_page > 0 {
                 self.previous_page_with_height(height);
                 let previous_visible = self.current_page_block_indices(height);
                 if let Some(last) = previous_visible.last() {
-                    self.selected_block = *last;
+                    self.runtime.selected_block = *last;
                     self.control_active = false;
-                    self.control_snapshot = None;
+                    self.clear_selected_snapshot();
                 }
             }
         } else {
-            self.selected_block = visible[0];
+            self.runtime.selected_block = visible[0];
             self.control_active = false;
-            self.control_snapshot = None;
+            self.clear_selected_snapshot();
         }
     }
 
@@ -832,7 +469,9 @@ impl ContentPanel {
     }
 
     pub fn total_pages(&self, _width: u16, height: u16) -> usize {
-        self.layout_pages(self.effective_height(height)).len().max(1)
+        self.layout_pages(self.effective_height(height))
+            .len()
+            .max(1)
     }
 
     fn layout_pages(&self, height: u16) -> Vec<ContentPage> {
@@ -912,32 +551,160 @@ impl ContentPanel {
 
     fn current_page_body(&self, _width: u16, height: u16) -> Option<ContentPage> {
         let pages = self.layout_pages(self.effective_height(height));
-        let page_index = self.current_page.min(pages.len().saturating_sub(1));
+        let page_index = self.runtime.current_page.min(pages.len().saturating_sub(1));
         pages.get(page_index).cloned()
     }
 
     fn current_page_block_indices(&self, height: u16) -> Vec<usize> {
         self.current_page_body(0, height)
-            .map(|page| {
-                page.blocks
-                    .into_iter()
-                    .map(|block| block.index)
-                    .collect()
-            })
+            .map(|page| page.blocks.into_iter().map(|block| block.index).collect())
             .unwrap_or_default()
     }
 
     fn clamp_selection_to_page(&mut self, height: u16) {
         let visible = self.current_page_block_indices(height);
         if visible.is_empty() {
-            self.selected_block = 0;
+            self.runtime.selected_block = 0;
             return;
         }
 
-        if !visible.contains(&self.selected_block) {
-            self.selected_block = visible[0];
+        if !visible.contains(&self.runtime.selected_block) {
+            self.runtime.selected_block = visible[0];
             self.control_active = false;
-            self.control_snapshot = None;
+            self.clear_selected_snapshot();
+        }
+    }
+
+    fn selected_block_state(&self) -> Option<&crate::runtime::RuntimeFieldState> {
+        self.runtime.field_state(self.runtime.selected_block)
+    }
+
+    fn selected_block_state_mut(&mut self) -> Option<&mut crate::runtime::RuntimeFieldState> {
+        self.runtime.field_state_mut(self.runtime.selected_block)
+    }
+
+    fn clear_selected_snapshot(&mut self) {
+        if let Some(state) = self.selected_block_state_mut() {
+            state.snapshot = None;
+        }
+    }
+
+    fn block_state(&self, index: usize) -> Option<&crate::runtime::RuntimeFieldState> {
+        self.runtime.field_state(index)
+    }
+
+    fn block_state_mut(&mut self, index: usize) -> Option<&mut crate::runtime::RuntimeFieldState> {
+        self.runtime.field_state_mut(index)
+    }
+
+    fn block_is_running(&self, index: usize) -> bool {
+        self.block_state(index)
+            .map(|state| matches!(state.status, OperationStatus::Running { .. }))
+            .unwrap_or(false)
+    }
+
+    fn block_control(&self, index: usize) -> Option<&ContentControl> {
+        self.block_state(index).map(|state| &state.control)
+    }
+
+    fn block_control_mut(&mut self, index: usize) -> Option<&mut ContentControl> {
+        self.block_state_mut(index).map(|state| &mut state.control)
+    }
+
+    fn selected_block_control_mut(&mut self) -> Option<&mut ContentControl> {
+        self.block_control_mut(self.runtime.selected_block)
+    }
+
+    fn start_operation(
+        &mut self,
+        operation_id: u64,
+        screen_index: usize,
+        block_index: usize,
+        original_control: ContentControl,
+        pending_control: ContentControl,
+    ) -> Option<OperationRequest> {
+        let command = self.block_mut_by_index(block_index)?.operation.clone()?;
+        let state = self.block_state_mut(block_index)?;
+        state.status = OperationStatus::Running {
+            operation_id,
+            started_at: std::time::Instant::now(),
+            original_control,
+            pending_control,
+        };
+        Some(OperationRequest {
+            operation_id,
+            screen_index,
+            block_index,
+            source: match command.source {
+                OperationSource::ShellCommand(command) => {
+                    ExecutorOperationSource::ShellCommand(command)
+                }
+                OperationSource::RegisteredAction(action) => {
+                    ExecutorOperationSource::RegisteredAction(action)
+                }
+            },
+            params: self.operation_params(),
+            host: HashMap::new(),
+            cwd: None,
+            env: HashMap::new(),
+            result_target: command.result_target,
+        })
+    }
+
+    fn operation_params(&self) -> HashMap<String, String> {
+        let mut params = HashMap::new();
+        let page_scope = scope_slug(&self.blueprint.title);
+        let mut index = 0usize;
+
+        for section in &self.blueprint.sections {
+            for block in &section.blocks {
+                if let Some(id) = &block.id {
+                    if let Some(control) = self.block_control(index) {
+                        let value = control_value(control);
+                        params.insert(id.clone(), value.clone());
+                        params.insert(format!("screen.{id}"), value.clone());
+                        if !page_scope.is_empty() {
+                            params.insert(format!("{page_scope}.{id}"), value);
+                        }
+                    }
+                }
+                index += 1;
+            }
+        }
+
+        params
+    }
+
+    fn apply_operation_result_to_block(&mut self, target_index: usize, result: &OperationResult) {
+        let Some(state) = self.block_state(target_index).cloned() else {
+            return;
+        };
+        let OperationStatus::Running {
+            operation_id,
+            original_control,
+            pending_control,
+            ..
+        } = state.status
+        else {
+            return;
+        };
+
+        if operation_id != result.operation_id {
+            return;
+        }
+
+        if let Some(state) = self.block_state_mut(target_index) {
+            state.control = if result.success {
+                pending_control
+            } else {
+                original_control
+            };
+            state.snapshot = None;
+            state.status = if result.success {
+                OperationStatus::Success
+            } else {
+                OperationStatus::Failure
+            };
         }
     }
 
@@ -945,20 +712,7 @@ impl ContentPanel {
         let mut index = 0usize;
         for section in &self.blueprint.sections {
             for block in &section.blocks {
-                if index == self.selected_block {
-                    return Some(block);
-                }
-                index += 1;
-            }
-        }
-        None
-    }
-
-    fn selected_block_mut(&mut self) -> Option<&mut ContentBlock> {
-        let mut index = 0usize;
-        for section in &mut self.blueprint.sections {
-            for block in &mut section.blocks {
-                if index == self.selected_block {
+                if index == self.runtime.selected_block {
                     return Some(block);
                 }
                 index += 1;
@@ -980,25 +734,30 @@ impl ContentPanel {
         None
     }
 
-    fn block_mut_by_id(&mut self, target_id: &str) -> Option<&mut ContentBlock> {
-        for section in &mut self.blueprint.sections {
-            for block in &mut section.blocks {
+    fn block_index_by_id(&self, target_id: &str) -> Option<usize> {
+        let mut index = 0usize;
+        for section in &self.blueprint.sections {
+            for block in &section.blocks {
                 if block.id.as_deref() == Some(target_id) {
-                    return Some(block);
+                    return Some(index);
                 }
+                index += 1;
             }
         }
         None
     }
 
+    fn block_control_mut_by_id(&mut self, target_id: &str) -> Option<&mut ContentControl> {
+        let index = self.block_index_by_id(target_id)?;
+        self.block_control_mut(index)
+    }
+
     pub fn apply_operation_result(&mut self, result: &OperationResult) {
-        if let Some(block) = self.block_mut_by_index(result.block_index) {
-            block.apply_operation_result(result);
-        }
+        self.apply_operation_result_to_block(result.block_index, result);
 
         if let Some(target_id) = result.result_target.as_deref() {
-            if let Some(block) = self.block_mut_by_id(target_id) {
-                if let ContentControl::LogOutput(log) = &mut block.control {
+            if let Some(control) = self.block_control_mut_by_id(target_id) {
+                if let ContentControl::LogOutput(log) = control {
                     log.append_entry(Self::format_result_output(result));
                 }
             }
@@ -1033,12 +792,8 @@ impl ContentPanel {
     }
 
     fn selected_control_kind(&self) -> Option<SelectedControlKind> {
-        self.blueprint
-            .sections
-            .iter()
-            .flat_map(|section| section.blocks.iter())
-            .nth(self.selected_block)
-            .map(|block| match block.control {
+        self.block_control(self.runtime.selected_block)
+            .map(|control| match control {
                 ContentControl::TextInput(_) => SelectedControlKind::TextInput,
                 ContentControl::NumberInput(_) => SelectedControlKind::NumberInput,
                 ContentControl::Select(_) => SelectedControlKind::Select,
@@ -1047,7 +802,6 @@ impl ContentPanel {
                 ContentControl::StaticData(_) => SelectedControlKind::StaticData,
                 ContentControl::DynamicData(_) => SelectedControlKind::DynamicData,
                 ContentControl::LogOutput(_) => SelectedControlKind::LogOutput,
-                ContentControl::StaticText(_) => SelectedControlKind::StaticText,
             })
     }
 
@@ -1057,7 +811,8 @@ impl ContentPanel {
 
     fn page_label(&self, height: u16, page: usize) -> String {
         let pages = self.layout_pages(self.effective_height(height));
-        pages.get(page)
+        pages
+            .get(page)
             .map(|page| page.subtitle.clone())
             .unwrap_or_else(|| self.blueprint.title.clone())
     }
@@ -1077,7 +832,7 @@ impl ContentPanel {
         let total_pages = self.total_pages(0, height);
         let visible_pages = (height / Self::PAGE_SLOT_HEIGHT).max(1) as usize;
         let total_visible = total_pages.min(visible_pages);
-        let current_page = self.current_page.min(total_pages.saturating_sub(1));
+        let current_page = self.runtime.current_page.min(total_pages.saturating_sub(1));
         let start_page = current_page.saturating_add(1).saturating_sub(total_visible);
         let end_page = (start_page + total_visible).min(total_pages);
         let slots = (total_visible as u16 * Self::PAGE_SLOT_HEIGHT) as usize;
@@ -1166,9 +921,10 @@ impl ContentPanel {
                 f,
                 block_rect,
                 &block.block,
+                block.index,
                 text_width,
                 control_width,
-                block.index == self.selected_block,
+                block.index == self.runtime.selected_block,
             );
             cursor_y = cursor_y.saturating_add(intended_height);
         }
@@ -1192,6 +948,7 @@ impl ContentPanel {
         f: &mut Frame,
         rect: Rect,
         block: &ContentBlock,
+        block_index: usize,
         text_width: u16,
         control_width: u16,
         selected: bool,
@@ -1206,11 +963,7 @@ impl ContentPanel {
             .saturating_add(1)
             .min(content_rect.y + content_rect.height.saturating_sub(1));
         f.buffer_mut()[(content_rect.x, baseline_y)]
-            .set_char(if selected && self.focused {
-                '>'
-            } else {
-                ' '
-            })
+            .set_char(if selected && self.focused { '>' } else { ' ' })
             .set_fg(Color::Yellow);
 
         let text_rect = Rect::new(
@@ -1240,9 +993,15 @@ impl ContentPanel {
             },
         );
 
-        let control_rect = Rect::new(control_x, content_rect.y, control_width, content_rect.height);
-        let feedback = self.feedback_for(&block.status);
-        block.control.render(
+        let control_rect = Rect::new(
+            control_x,
+            content_rect.y,
+            control_width,
+            content_rect.height,
+        );
+        let feedback = self.feedback_for(block_index);
+        render_control(
+            self.block_control(block_index).unwrap_or(&block.control),
             control_rect,
             f.buffer_mut(),
             selected && self.focused,
@@ -1251,10 +1010,14 @@ impl ContentPanel {
         );
     }
 
-    fn feedback_for(&self, status: &OperationStatus) -> ControlFeedback {
-        match status {
+    fn feedback_for(&self, block_index: usize) -> ControlFeedback {
+        match self
+            .block_state(block_index)
+            .map(|state| &state.status)
+            .unwrap_or(&OperationStatus::Idle)
+        {
             OperationStatus::Idle => ControlFeedback::Idle,
-            OperationStatus::Running { .. } => ControlFeedback::Running(self.spinner_tick),
+            OperationStatus::Running { .. } => ControlFeedback::Running(self.runtime.spinner_tick),
             OperationStatus::Success => ControlFeedback::Success,
             OperationStatus::Failure => ControlFeedback::Failure,
         }
@@ -1330,9 +1093,7 @@ impl ContentPanel {
                 break;
             }
 
-            f.buffer_mut()[(cursor_x, y)]
-                .set_char(ch)
-                .set_style(style);
+            f.buffer_mut()[(cursor_x, y)].set_char(ch).set_style(style);
 
             cursor_x = cursor_x.saturating_add(ch_width as u16);
             used_width += ch_width;
@@ -1362,7 +1123,7 @@ impl Component for ContentPanel {
     fn blur(&mut self) {
         self.focused = false;
         self.control_active = false;
-        self.control_snapshot = None;
+        self.clear_selected_snapshot();
     }
 
     fn render(&mut self, f: &mut Frame, rect: Rect) {
@@ -1400,32 +1161,29 @@ impl Component for ContentPanel {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        ContentBlock, ContentBlueprint, ContentPanel, ContentSection,
-    };
+    use super::ContentPanel;
     use crate::executor::OperationResult;
+    use crate::runtime::{ContentBlock, ContentBlueprint, ContentSection};
     use ratatui::style::Color;
 
     fn panel_with_sections() -> ContentPanel {
         let mut panel = ContentPanel::new();
-        panel.set_blueprint(
-            ContentBlueprint::new("Root").with_sections(vec![
-                ContentSection::new("概览").with_blocks(vec![
-                    ContentBlock::text_input("用户名", "demo", "输入用户名"),
-                    ContentBlock::toggle("开启高级模式", true),
-                ]),
-                ContentSection::new("行为").with_blocks(vec![
-                    ContentBlock::select("日志级别", ["info", "debug", "trace"], 0),
-                    ContentBlock::number_input("端口", "8080", "输入端口"),
-                    ContentBlock::text_input("保存路径", "/tmp", "输入路径").with_height_units(2),
-                ]),
-                ContentSection::new("动作").with_blocks(vec![
-                    ContentBlock::refresh_button("刷新列表", "刷新").with_operation_success(700),
-                    ContentBlock::static_data("版本", "v0.1.0"),
-                    ContentBlock::log_output("最近输出", "line one\nline two").with_height_units(2),
-                ]),
+        panel.set_blueprint(ContentBlueprint::new("Root").with_sections(vec![
+            ContentSection::new("概览").with_blocks(vec![
+                ContentBlock::text_input("用户名", "demo", "输入用户名"),
+                ContentBlock::toggle("开启高级模式", true),
             ]),
-        );
+            ContentSection::new("行为").with_blocks(vec![
+                ContentBlock::select("日志级别", ["info", "debug", "trace"], 0),
+                ContentBlock::number_input("端口", "8080", "输入端口"),
+                ContentBlock::text_input("保存路径", "/tmp", "输入路径").with_height_units(2),
+            ]),
+            ContentSection::new("动作").with_blocks(vec![
+                ContentBlock::refresh_button("刷新列表", "刷新").with_operation_success(700),
+                ContentBlock::static_data("版本", "v0.1.0"),
+                ContentBlock::log_output("最近输出", "line one\nline two").with_height_units(2),
+            ]),
+        ]));
         panel
     }
 
@@ -1447,10 +1205,9 @@ mod tests {
     fn content_panel_truncates_page_label_to_ten_chars() {
         let mut panel = ContentPanel::new();
         panel.set_blueprint(
-            ContentBlueprint::new("Root").with_sections(vec![ContentSection::new(
-                "一个超过十个字符的子标题名称",
-            )
-            .with_blocks(vec![ContentBlock::description("描述")])]),
+            ContentBlueprint::new("Root")
+                .with_sections(vec![ContentSection::new("一个超过十个字符的子标题名称")
+                    .with_blocks(vec![ContentBlock::static_data("描述", "value")])]),
         );
 
         let label = panel.truncated_page_label(6, 0, 32);
@@ -1463,7 +1220,7 @@ mod tests {
         let mut panel = ContentPanel::new();
         panel.set_blueprint(
             ContentBlueprint::new("Root").with_sections(vec![ContentSection::new("概览")
-                .with_blocks(vec![ContentBlock::description("One")])]),
+                .with_blocks(vec![ContentBlock::static_data("One", "value")])]),
         );
 
         let glyphs: Vec<char> = panel
@@ -1496,16 +1253,6 @@ mod tests {
         let cells = panel.pagination_rows(6);
 
         assert_eq!(cells[1].2.as_deref(), Some("概览"));
-    }
-
-    #[test]
-    fn legacy_set_content_builds_default_sections() {
-        let mut panel = ContentPanel::new();
-        panel.set_content("Title", "Summary", ["One", "Two"]);
-
-        assert_eq!(panel.blueprint.sections.len(), 2);
-        assert_eq!(panel.blueprint.sections[0].subtitle, "概览");
-        assert_eq!(panel.blueprint.sections[1].subtitle, "细项");
     }
 
     #[test]
@@ -1563,7 +1310,7 @@ mod tests {
         assert!(panel.is_control_active());
         assert!(panel.handle_control_key(crate::event::Key::Char('x')));
 
-        match &panel.blueprint.sections[0].blocks[0].control {
+        match &panel.blueprint().sections[0].blocks[0].control {
             super::ContentControl::TextInput(control) => assert_eq!(control.value, "demox"),
             _ => panic!("expected text input"),
         }
@@ -1577,7 +1324,7 @@ mod tests {
         assert!(panel.activate_selected_control(1, 0).is_none());
         assert!(!panel.is_control_active());
 
-        match &panel.blueprint.sections[0].blocks[1].control {
+        match &panel.blueprint().sections[0].blocks[1].control {
             super::ContentControl::Toggle(control) => assert!(!control.on),
             _ => panic!("expected toggle"),
         }
@@ -1594,7 +1341,7 @@ mod tests {
         assert!(panel.handle_control_key(crate::event::Key::Char('9')));
         assert!(!panel.handle_control_key(crate::event::Key::Char('x')));
 
-        match &panel.blueprint.sections[1].blocks[1].control {
+        match &panel.blueprint().sections[1].blocks[1].control {
             super::ContentControl::NumberInput(control) => assert_eq!(control.value, "80809"),
             _ => panic!("expected number input"),
         }
@@ -1610,7 +1357,7 @@ mod tests {
         assert!(panel.handle_control_key(crate::event::Key::Char('j')));
         panel.cancel_control();
 
-        match &panel.blueprint.sections[1].blocks[0].control {
+        match &panel.blueprint().sections[1].blocks[0].control {
             super::ContentControl::Select(control) => assert_eq!(control.selected, 0),
             _ => panic!("expected select"),
         }
@@ -1662,15 +1409,15 @@ mod tests {
     #[test]
     fn operation_result_updates_bound_log_output() {
         let mut panel = ContentPanel::new();
-        panel.set_blueprint(
-            ContentBlueprint::new("Root").with_sections(vec![ContentSection::new("动作").with_blocks(vec![
+        panel.set_blueprint(ContentBlueprint::new("Root").with_sections(vec![
+            ContentSection::new("动作").with_blocks(vec![
                 ContentBlock::action_button("执行同步", "执行")
                     .with_id("run_sync")
                     .with_result_target("sync_log")
                     .with_shell_command("printf 'done\\n'"),
                 ContentBlock::log_output("输出", "等待操作").with_id("sync_log"),
-            ])]),
-        );
+            ]),
+        ]));
 
         let request = panel.activate_selected_control(11, 0).unwrap();
         assert_eq!(request.result_target.as_deref(), Some("sync_log"));
@@ -1685,7 +1432,7 @@ mod tests {
             stderr: String::new(),
         });
 
-        match &panel.blueprint.sections[0].blocks[1].control {
+        match &panel.blueprint().sections[0].blocks[1].control {
             super::ContentControl::LogOutput(log) => assert!(log.content.contains("done")),
             _ => panic!("expected log output"),
         }
@@ -1694,15 +1441,15 @@ mod tests {
     #[test]
     fn operation_result_appends_to_existing_log_output() {
         let mut panel = ContentPanel::new();
-        panel.set_blueprint(
-            ContentBlueprint::new("Root").with_sections(vec![ContentSection::new("动作").with_blocks(vec![
+        panel.set_blueprint(ContentBlueprint::new("Root").with_sections(vec![
+            ContentSection::new("动作").with_blocks(vec![
                 ContentBlock::action_button("执行同步", "执行")
                     .with_id("run_sync")
                     .with_result_target("sync_log")
                     .with_shell_command("printf 'done\\n'"),
                 ContentBlock::log_output("输出", "previous line").with_id("sync_log"),
-            ])]),
-        );
+            ]),
+        ]));
 
         panel.apply_operation_result(&OperationResult {
             operation_id: 12,
@@ -1714,7 +1461,7 @@ mod tests {
             stderr: String::new(),
         });
 
-        match &panel.blueprint.sections[0].blocks[1].control {
+        match &panel.blueprint().sections[0].blocks[1].control {
             super::ContentControl::LogOutput(log) => {
                 assert!(log.content.contains("previous line"));
                 assert!(log.content.contains("[success]"));
@@ -1722,5 +1469,50 @@ mod tests {
             }
             _ => panic!("expected log output"),
         }
+    }
+
+    #[test]
+    fn registered_action_request_includes_current_field_values() {
+        let mut panel = ContentPanel::new();
+        panel.set_blueprint(ContentBlueprint::new("Root").with_sections(vec![
+            ContentSection::new("动作").with_blocks(vec![
+                    ContentBlock::text_input("项目名", "tui01", "输入项目名")
+                        .with_id("project_name"),
+                    ContentBlock::number_input("端口", "3000", "输入端口").with_id("server_port"),
+                    ContentBlock::refresh_button("刷新", "刷新")
+                        .with_registered_action("refresh_workspace"),
+                ]),
+        ]));
+
+        panel.select_next_block(20);
+        panel.select_next_block(20);
+
+        let request = panel.activate_selected_control(21, 0).unwrap();
+        assert_eq!(
+            request.params.get("project_name").map(String::as_str),
+            Some("tui01")
+        );
+        assert_eq!(
+            request.params.get("server_port").map(String::as_str),
+            Some("3000")
+        );
+        assert_eq!(
+            request
+                .params
+                .get("screen.project_name")
+                .map(String::as_str),
+            Some("tui01")
+        );
+        assert_eq!(
+            request.params.get("root.server_port").map(String::as_str),
+            Some("3000")
+        );
+    }
+
+    #[test]
+    fn page_scope_slug_normalizes_blueprint_title() {
+        assert_eq!(super::scope_slug("Workspace"), "workspace");
+        assert_eq!(super::scope_slug("Theme Settings"), "theme_settings");
+        assert_eq!(super::scope_slug("中文 / Mixed-Page"), "mixed_page");
     }
 }

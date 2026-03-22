@@ -1,14 +1,25 @@
 //! 通用的四分区展示应用壳层。
 
 use crate::action::Action;
+use crate::builder::AppValidationError;
 use crate::components::{
-    Component, ContentBlueprint, ContentPanel, MenuComponent, MenuItem, QuadrantConfig,
-    QuadrantLayout, StatusPanel, TitlePanel,
+    Component, ContentPanel, MenuComponent, MenuItem, QuadrantConfig, QuadrantLayout, StatusPanel,
+    TitlePanel,
 };
-use crate::executor::{OperationExecutor, OperationRequest, OperationResult};
 use crate::event::{Event, Key};
+use crate::executor::{
+    ActionContext, ActionOutcome, ActionRegistry, OperationExecutor, OperationRequest,
+    OperationResult,
+};
+use crate::host::RuntimeHost;
+use crate::runtime::ContentBlueprint;
+use crate::schema::PageSpec;
 use crate::tui::{self, MAX_ASPECT_RATIO, MIN_ASPECT_RATIO, MIN_HEIGHT, MIN_WIDTH};
-use ratatui::{layout::Rect, style::{Color, Style}, widgets::Paragraph};
+use ratatui::{
+    layout::Rect,
+    style::{Color, Style},
+    widgets::Paragraph,
+};
 
 pub struct ShowcaseApp {
     pub running: bool,
@@ -22,6 +33,7 @@ pub struct ShowcaseApp {
     active_screen: usize,
     loaded_screen: Option<usize>,
     executor: OperationExecutor,
+    host: RuntimeHost,
     next_operation_id: u64,
     copy: ShowcaseCopy,
     focus: FocusTarget,
@@ -40,18 +52,56 @@ enum FocusTarget {
 }
 
 pub struct ShowcaseScreen {
-    pub title: &'static str,
+    pub title: String,
     pub content: ContentBlueprint,
 }
 
+impl ShowcaseScreen {
+    pub fn from_page(title: impl Into<String>, page: PageSpec) -> Self {
+        Self {
+            title: title.into(),
+            content: page.materialize().into(),
+        }
+    }
+}
+
 pub struct ShowcaseCopy {
-    pub title_text: &'static str,
-    pub status_controls: &'static str,
+    pub title_text: String,
+    pub status_controls: String,
 }
 
 impl ShowcaseApp {
     pub fn new(copy: ShowcaseCopy, screens: Vec<ShowcaseScreen>) -> Self {
-        let items = screens.iter().map(|screen| MenuItem::new(screen.title)).collect();
+        Self::with_host(copy, screens, RuntimeHost::new())
+    }
+
+    pub fn with_host(copy: ShowcaseCopy, screens: Vec<ShowcaseScreen>, host: RuntimeHost) -> Self {
+        Self::with_registry_and_host(copy, screens, host.action_registry(), host)
+    }
+
+    pub fn with_registry(
+        copy: ShowcaseCopy,
+        screens: Vec<ShowcaseScreen>,
+        registry: ActionRegistry,
+    ) -> Self {
+        Self::with_registry_and_host(
+            copy,
+            screens,
+            registry.clone(),
+            RuntimeHost::with_registry(registry),
+        )
+    }
+
+    fn with_registry_and_host(
+        copy: ShowcaseCopy,
+        screens: Vec<ShowcaseScreen>,
+        registry: ActionRegistry,
+        host: RuntimeHost,
+    ) -> Self {
+        let items = screens
+            .iter()
+            .map(|screen| MenuItem::new(screen.title.clone()))
+            .collect();
         let mut menu = MenuComponent::new(items);
         menu.focus();
 
@@ -59,14 +109,15 @@ impl ShowcaseApp {
             running: true,
             size_error: None,
             quadrant_layout: QuadrantLayout::new(QuadrantConfig::default()),
-            title_panel: TitlePanel::new(copy.title_text),
+            title_panel: TitlePanel::new(copy.title_text.clone()),
             status_panel: StatusPanel::new(""),
             menu,
             content_panel: ContentPanel::new(),
             screens,
             active_screen: 0,
             loaded_screen: None,
-            executor: OperationExecutor::new(),
+            executor: OperationExecutor::with_registry(registry),
+            host,
             next_operation_id: 1,
             copy,
             focus: FocusTarget::Menu,
@@ -127,6 +178,55 @@ impl ShowcaseApp {
         self.content_panel.selected_block()
     }
 
+    pub fn register_shell_action(&mut self, name: impl Into<String>, command: impl Into<String>) {
+        let name = name.into();
+        let command = command.into();
+        self.host
+            .register_shell_action(name.clone(), command.clone());
+        self.executor = OperationExecutor::with_registry(self.host.action_registry());
+    }
+
+    pub fn register_action_handler<F, Fut>(&mut self, name: impl Into<String>, handler: F)
+    where
+        F: Fn(ActionContext) -> Fut + Send + Sync + 'static,
+        Fut: std::future::Future<Output = ActionOutcome> + Send + 'static,
+    {
+        self.host.register_action_handler(name.into(), handler);
+        self.executor = OperationExecutor::with_registry(self.host.action_registry());
+    }
+
+    pub fn host(&self) -> &RuntimeHost {
+        &self.host
+    }
+
+    pub fn validate_registered_actions(&self) -> Result<(), AppValidationError> {
+        for screen in &self.screens {
+            for section in &screen.content.sections {
+                for block in &section.blocks {
+                    let source_field = block
+                        .id
+                        .clone()
+                        .unwrap_or_else(|| format!("{}:{}", screen.title, block.label));
+
+                    if let Some(operation) = &block.operation {
+                        if let crate::runtime::OperationSource::RegisteredAction(action) =
+                            &operation.source
+                        {
+                            if !self.host.has_action(action) {
+                                return Err(AppValidationError::UnknownRegisteredAction {
+                                    source_field,
+                                    action: action.clone(),
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     fn handle_key(&mut self, key: Key) {
         if key == Key::Char('q') {
             self.apply_action(Action::Quit);
@@ -146,7 +246,8 @@ impl ShowcaseApp {
                 self.focus_content();
             }
             Key::Char('K') => {
-                self.content_panel.previous_page_with_height(self.current_content_rect().height);
+                self.content_panel
+                    .previous_page_with_height(self.current_content_rect().height);
                 let action = self.menu.handle_events(Some(Event::Key(key)));
                 self.apply_action(action);
                 self.sync_active_to_menu_selection();
@@ -220,13 +321,15 @@ impl ShowcaseApp {
 
         match key {
             Key::Up | Key::Char('k') => {
-                self.content_panel.select_previous_block(content_rect.height);
+                self.content_panel
+                    .select_previous_block(content_rect.height);
             }
             Key::Down | Key::Char('j') => {
                 self.content_panel.select_next_block(content_rect.height);
             }
             Key::Char('K') => {
-                self.content_panel.previous_page_with_height(content_rect.height);
+                self.content_panel
+                    .previous_page_with_height(content_rect.height);
             }
             Key::Char('J') => {
                 self.content_panel
@@ -334,7 +437,7 @@ impl ShowcaseApp {
     }
 
     fn sync_panels(&mut self) {
-        self.title_panel.set_text(self.copy.title_text);
+        self.title_panel.set_text(self.copy.title_text.clone());
 
         let selected = self
             .menu
@@ -345,7 +448,7 @@ impl ShowcaseApp {
         let active = self
             .screens
             .get(self.active_screen)
-            .map(|screen| screen.title)
+            .map(|screen| screen.title.as_str())
             .unwrap_or("None");
 
         let focus_label = match self.focus {
@@ -363,7 +466,7 @@ impl ShowcaseApp {
 
     fn persist_active_screen_content(&mut self) {
         if let Some(screen) = self.screens.get_mut(self.active_screen) {
-            screen.content = self.content_panel.blueprint().clone();
+            screen.content = self.content_panel.blueprint();
         }
     }
 
@@ -387,11 +490,18 @@ impl ShowcaseApp {
     }
 
     fn submit_operation(&mut self, request: OperationRequest) {
-        self.status_panel.set_running_result(format!(
-            "正在执行\n{}",
-            request.command
-        ));
-        self.executor.submit(request);
+        self.status_panel
+            .set_running_result(format!("正在执行\n{}", request.source.describe()));
+        self.executor.submit(OperationRequest {
+            host: self.host.context().clone(),
+            cwd: self
+                .host
+                .working_dir()
+                .and_then(|path| path.to_str())
+                .map(str::to_string),
+            env: self.host.shell().env().clone(),
+            ..request
+        });
     }
 
     fn apply_operation_result(&mut self, result: OperationResult) {
@@ -399,7 +509,7 @@ impl ShowcaseApp {
             let mut panel = ContentPanel::new();
             panel.set_blueprint(screen.content.clone());
             panel.apply_operation_result(&result);
-            screen.content = panel.blueprint().clone();
+            screen.content = panel.blueprint();
         }
 
         if result.screen_index == self.active_screen {
@@ -421,7 +531,11 @@ impl ShowcaseApp {
             result.stderr.as_str()
         };
 
-        let fallback = if result.success { "操作成功" } else { "操作失败" };
+        let fallback = if result.success {
+            "操作成功"
+        } else {
+            "操作失败"
+        };
 
         primary
             .lines()
@@ -463,27 +577,23 @@ mod tests {
     use super::{FocusTarget, ShowcaseApp, ShowcaseCopy, ShowcaseScreen};
     use crate::components::{ContentBlock, ContentBlueprint, ContentSection};
     use crate::event::{Event, Key};
+    use crate::executor::ActionOutcome;
 
     fn screen(title: &'static str, text: &'static str) -> ShowcaseScreen {
         ShowcaseScreen {
-            title,
-            content: ContentBlueprint::new(title).with_sections(vec![
-                ContentSection::new("概览")
-                    .with_blocks(vec![ContentBlock::text_input(text, "", "输入值")]),
-            ]),
+            title: title.to_string(),
+            content: ContentBlueprint::new(title).with_sections(vec![ContentSection::new("概览")
+                .with_blocks(vec![ContentBlock::text_input(text, "", "输入值")])]),
         }
     }
 
     fn make_app() -> ShowcaseApp {
         ShowcaseApp::new(
             ShowcaseCopy {
-                title_text: "Title",
-                status_controls: "Controls",
+                title_text: "Title".to_string(),
+                status_controls: "Controls".to_string(),
             },
-            vec![
-                screen("One", "First"),
-                screen("Two", "Second"),
-            ],
+            vec![screen("One", "First"), screen("Two", "Second")],
         )
     }
 
@@ -522,16 +632,18 @@ mod tests {
     fn content_focus_moves_block_selection_with_jk() {
         let mut app = ShowcaseApp::new(
             ShowcaseCopy {
-                title_text: "Title",
-                status_controls: "Controls",
+                title_text: "Title".to_string(),
+                status_controls: "Controls".to_string(),
             },
             vec![ShowcaseScreen {
-                title: "One",
-                content: ContentBlueprint::new("One").with_sections(vec![ContentSection::new("概览")
-                    .with_blocks(vec![
-                        ContentBlock::toggle("A", true),
-                        ContentBlock::select("B", ["One", "Two"], 0),
-                    ])]),
+                title: "One".to_string(),
+                content: ContentBlueprint::new("One").with_sections(vec![ContentSection::new(
+                    "概览",
+                )
+                .with_blocks(vec![
+                    ContentBlock::toggle("A", true),
+                    ContentBlock::select("B", ["One", "Two"], 0),
+                ])]),
             }],
         );
 
@@ -547,13 +659,14 @@ mod tests {
     fn toggle_changes_persist_while_syncing_panels() {
         let mut app = ShowcaseApp::new(
             ShowcaseCopy {
-                title_text: "Title",
-                status_controls: "Controls",
+                title_text: "Title".to_string(),
+                status_controls: "Controls".to_string(),
             },
             vec![ShowcaseScreen {
-                title: "One",
-                content: ContentBlueprint::new("One").with_sections(vec![ContentSection::new("概览")
-                    .with_blocks(vec![ContentBlock::toggle("A", false)])]),
+                title: "One".to_string(),
+                content: ContentBlueprint::new("One")
+                    .with_sections(vec![ContentSection::new("概览")
+                        .with_blocks(vec![ContentBlock::toggle("A", false)])]),
             }],
         );
 
@@ -582,13 +695,14 @@ mod tests {
     fn h_cancels_active_control_without_returning_to_menu() {
         let mut app = ShowcaseApp::new(
             ShowcaseCopy {
-                title_text: "Title",
-                status_controls: "Controls",
+                title_text: "Title".to_string(),
+                status_controls: "Controls".to_string(),
             },
             vec![ShowcaseScreen {
-                title: "One",
-                content: ContentBlueprint::new("One").with_sections(vec![ContentSection::new("概览")
-                    .with_blocks(vec![ContentBlock::select("B", ["One", "Two"], 0)])]),
+                title: "One".to_string(),
+                content: ContentBlueprint::new("One")
+                    .with_sections(vec![ContentSection::new("概览")
+                        .with_blocks(vec![ContentBlock::select("B", ["One", "Two"], 0)])]),
             }],
         );
 
@@ -605,13 +719,14 @@ mod tests {
     fn l_confirms_active_select_control() {
         let mut app = ShowcaseApp::new(
             ShowcaseCopy {
-                title_text: "Title",
-                status_controls: "Controls",
+                title_text: "Title".to_string(),
+                status_controls: "Controls".to_string(),
             },
             vec![ShowcaseScreen {
-                title: "One",
-                content: ContentBlueprint::new("One").with_sections(vec![ContentSection::new("概览")
-                    .with_blocks(vec![ContentBlock::select("B", ["One", "Two"], 0)])]),
+                title: "One".to_string(),
+                content: ContentBlueprint::new("One")
+                    .with_sections(vec![ContentSection::new("概览")
+                        .with_blocks(vec![ContentBlock::select("B", ["One", "Two"], 0)])]),
             }],
         );
 
@@ -631,13 +746,14 @@ mod tests {
     fn h_is_typed_inside_active_text_input() {
         let mut app = ShowcaseApp::new(
             ShowcaseCopy {
-                title_text: "Title",
-                status_controls: "Controls",
+                title_text: "Title".to_string(),
+                status_controls: "Controls".to_string(),
             },
             vec![ShowcaseScreen {
-                title: "One",
-                content: ContentBlueprint::new("One").with_sections(vec![ContentSection::new("概览")
-                    .with_blocks(vec![ContentBlock::text_input("Name", "", "输入")])]),
+                title: "One".to_string(),
+                content: ContentBlueprint::new("One")
+                    .with_sections(vec![ContentSection::new("概览")
+                        .with_blocks(vec![ContentBlock::text_input("Name", "", "输入")])]),
             }],
         );
 
@@ -672,23 +788,98 @@ mod tests {
     }
 
     #[test]
+    fn validate_registered_actions_passes_after_runtime_handler_registration() {
+        let mut app = ShowcaseApp::new(
+            ShowcaseCopy {
+                title_text: "Title".to_string(),
+                status_controls: "Controls".to_string(),
+            },
+            vec![ShowcaseScreen {
+                title: "One".to_string(),
+                content: ContentBlueprint::new("One").with_sections(vec![ContentSection::new(
+                    "Actions",
+                )
+                .with_blocks(vec![
+                    ContentBlock::action_button("Run", "Run").with_registered_action("run_sync")
+                ])]),
+            }],
+        );
+
+        assert!(app.validate_registered_actions().is_err());
+        app.register_action_handler("run_sync", |_| async { ActionOutcome::success("ok") });
+        assert!(app.validate_registered_actions().is_ok());
+    }
+
+    #[tokio::test]
+    async fn runtime_handler_results_flow_back_into_app() {
+        let mut app = ShowcaseApp::new(
+            ShowcaseCopy {
+                title_text: "Title".to_string(),
+                status_controls: "Controls".to_string(),
+            },
+            vec![ShowcaseScreen {
+                title: "One".to_string(),
+                content: ContentBlueprint::new("One").with_sections(vec![ContentSection::new(
+                    "Actions",
+                )
+                .with_blocks(vec![
+                    ContentBlock::text_input("项目名", "tui01", "输入").with_id("project_name"),
+                    ContentBlock::action_button("Run", "Run")
+                        .with_registered_action("run_sync")
+                        .with_result_target("run_log"),
+                    ContentBlock::log_output("输出", "等待").with_id("run_log"),
+                ])]),
+            }],
+        );
+        app.register_action_handler("run_sync", |context| async move {
+            ActionOutcome::success(format!(
+                "handler:{}",
+                context
+                    .params
+                    .get("project_name")
+                    .cloned()
+                    .unwrap_or_default()
+            ))
+        });
+
+        app.handle_event(Event::Key(Key::Char('l')));
+        app.handle_event(Event::Key(Key::Char('j')));
+        app.handle_event(Event::Key(Key::Enter));
+
+        for _ in 0..20 {
+            app.handle_event(Event::Tick);
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+
+        match &app.content_panel.blueprint().sections[0].blocks[2].control {
+            crate::components::ContentControl::LogOutput(log) => {
+                assert!(log.content.contains("handler:tui01"));
+            }
+            _ => panic!("expected log output"),
+        }
+    }
+
+    #[test]
     fn uppercase_j_pages_menu_and_content() {
         let mut app = ShowcaseApp::new(
             ShowcaseCopy {
-                title_text: "Title",
-                status_controls: "Controls",
+                title_text: "Title".to_string(),
+                status_controls: "Controls".to_string(),
             },
             vec![
                 ShowcaseScreen {
-                    title: "One",
+                    title: "One".to_string(),
                     content: ContentBlueprint::new("One").with_sections(vec![
                         ContentSection::new("Section A").with_blocks(vec![
-                            ContentBlock::text_input("First block", "alpha", "输入").with_height_units(2),
-                            ContentBlock::select("Second block", ["A", "B", "C"], 0).with_height_units(2),
+                            ContentBlock::text_input("First block", "alpha", "输入")
+                                .with_height_units(2),
+                            ContentBlock::select("Second block", ["A", "B", "C"], 0)
+                                .with_height_units(2),
                             ContentBlock::toggle("Third block", true).with_height_units(2),
                         ]),
                         ContentSection::new("Section B").with_blocks(vec![
-                            ContentBlock::text_input("Fourth block", "beta", "输入").with_height_units(2),
+                            ContentBlock::text_input("Fourth block", "beta", "输入")
+                                .with_height_units(2),
                         ]),
                     ]),
                 },

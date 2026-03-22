@@ -18,7 +18,6 @@ pub enum Key {
     Enter,
     Esc,
     Backspace,
-    Tab,
     Unknown,
 }
 
@@ -33,7 +32,6 @@ impl From<CrosstermKeyCode> for Key {
             CrosstermKeyCode::Enter => Self::Enter,
             CrosstermKeyCode::Esc => Self::Esc,
             CrosstermKeyCode::Backspace => Self::Backspace,
-            CrosstermKeyCode::Tab => Self::Tab,
             _ => Self::Unknown,
         }
     }
@@ -130,7 +128,6 @@ mod tests {
     #[case(CrosstermKeyCode::Enter, Key::Enter)]
     #[case(CrosstermKeyCode::Esc, Key::Esc)]
     #[case(CrosstermKeyCode::Backspace, Key::Backspace)]
-    #[case(CrosstermKeyCode::Tab, Key::Tab)]
     #[case(CrosstermKeyCode::F(1), Key::Unknown)]
     fn converts_crossterm_keycodes(#[case] input: CrosstermKeyCode, #[case] expected: Key) {
         assert_eq!(Key::from(input), expected);

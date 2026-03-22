@@ -18,8 +18,6 @@ use ratatui::{
 pub struct MenuItem {
     /// Display label for the menu item
     pub label: String,
-    /// Optional ID for component association at App level
-    pub id: Option<String>,
 }
 
 impl MenuItem {
@@ -27,14 +25,7 @@ impl MenuItem {
     pub fn new(label: impl Into<String>) -> Self {
         Self {
             label: label.into(),
-            id: None,
         }
-    }
-
-    /// Set an ID for component association
-    pub fn with_id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
-        self
     }
 }
 
@@ -95,7 +86,10 @@ impl MenuState {
         }
         let start = self.current_page * self.items_per_page;
         let end = std::cmp::min(start + self.items_per_page, self.items.len());
-        self.items[start..end].iter().map(|item| item.label.clone()).collect()
+        self.items[start..end]
+            .iter()
+            .map(|item| item.label.clone())
+            .collect()
     }
 
     /// Go to previous page (per D-11)
@@ -238,7 +232,9 @@ impl MenuComponent {
 
     fn item_style(&self, idx: usize, local_selected: usize) -> Style {
         if idx == local_selected {
-            Style::default().fg(Color::White).bg(Color::Rgb(52, 86, 112))
+            Style::default()
+                .fg(Color::White)
+                .bg(Color::Rgb(52, 86, 112))
         } else if self.focused {
             Style::default().fg(Color::White)
         } else {
@@ -302,7 +298,9 @@ impl Component for MenuComponent {
         // Update items per page based on available height (per D-10)
         self.state.update_items_per_page(rect.height as usize);
 
-        let bar = self.state.pagination_bar(rect.width.saturating_sub(4) as usize);
+        let bar = self
+            .state
+            .pagination_bar(rect.width.saturating_sub(4) as usize);
         let left_padding = rect.width.saturating_sub(bar.len() as u16) / 2;
         for (idx, (ch, color)) in bar.into_iter().enumerate() {
             let x = rect.x + left_padding + idx as u16;
@@ -336,7 +334,6 @@ impl Component for MenuComponent {
                 .style(style);
             f.render_widget(para, Rect::new(list_rect.x, y, list_rect.width, 1));
         }
-
     }
 }
 
@@ -435,7 +432,9 @@ mod tests {
         let bar = state.pagination_bar(8);
 
         assert_eq!(bar.len(), 8);
-        assert!(bar.iter().all(|(ch, color)| *ch == '━' && *color == Color::White));
+        assert!(bar
+            .iter()
+            .all(|(ch, color)| *ch == '━' && *color == Color::White));
     }
 
     #[test]
@@ -446,7 +445,9 @@ mod tests {
 
         let bar = state.pagination_bar(8);
 
-        assert!(bar.iter().any(|(ch, color)| *ch == '━' && *color == Color::White));
+        assert!(bar
+            .iter()
+            .any(|(ch, color)| *ch == '━' && *color == Color::White));
         assert!(bar
             .iter()
             .any(|(ch, color)| *ch == '─' && *color == Color::Rgb(170, 170, 170)));
