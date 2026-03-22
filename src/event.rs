@@ -5,6 +5,7 @@ use crossterm::event::{
 };
 use futures::{FutureExt, StreamExt};
 use tokio::sync::mpsc;
+use tokio::time::{self, Duration};
 
 /// 项目内部的按键类型，避免在上层直接依赖 crossterm。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,6 +42,8 @@ impl From<CrosstermKeyCode> for Key {
 /// 内部事件类型
 #[derive(Debug, Clone, Copy)]
 pub enum Event {
+    /// 周期性刷新事件，用于动画和轮询状态
+    Tick,
     /// 键盘输入事件
     Key(Key),
     /// 终端尺寸变化事件
@@ -62,11 +65,15 @@ impl EventHandler {
         tokio::spawn(async move {
             let mut reader = EventStream::new();
             let ctrl_c = tokio::signal::ctrl_c();
+            let mut tick = time::interval(Duration::from_millis(120));
 
             tokio::pin!(ctrl_c);
 
             loop {
                 tokio::select! {
+                    _ = tick.tick() => {
+                        let _ = sender.send(Event::Tick);
+                    }
                     // 处理终端事件
                     maybe_event = reader.next().fuse() => {
                         if let Some(Ok(evt)) = maybe_event {

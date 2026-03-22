@@ -5,6 +5,7 @@ use crate::components::{
     Component, ContentBlueprint, ContentPanel, MenuComponent, MenuItem, QuadrantConfig,
     QuadrantLayout, StatusPanel, TitlePanel,
 };
+use crate::executor::{OperationExecutor, OperationRequest, OperationResult};
 use crate::event::{Event, Key};
 use crate::tui::{self, MAX_ASPECT_RATIO, MIN_ASPECT_RATIO, MIN_HEIGHT, MIN_WIDTH};
 use ratatui::{layout::Rect, style::{Color, Style}, widgets::Paragraph};
@@ -20,6 +21,8 @@ pub struct ShowcaseApp {
     screens: Vec<ShowcaseScreen>,
     active_screen: usize,
     loaded_screen: Option<usize>,
+    executor: OperationExecutor,
+    next_operation_id: u64,
     copy: ShowcaseCopy,
     focus: FocusTarget,
 }
@@ -63,6 +66,8 @@ impl ShowcaseApp {
             screens,
             active_screen: 0,
             loaded_screen: None,
+            executor: OperationExecutor::new(),
+            next_operation_id: 1,
             copy,
             focus: FocusTarget::Menu,
         };
@@ -73,6 +78,10 @@ impl ShowcaseApp {
 
     pub fn handle_event(&mut self, event: Event) {
         match event {
+            Event::Tick => {
+                self.content_panel.tick();
+                self.poll_operation_results();
+            }
             Event::Resize(w, h) => self.apply_action(Action::Resize(w, h)),
             Event::Quit => self.apply_action(Action::Quit),
             Event::Key(key) => self.handle_key(key),
@@ -162,20 +171,48 @@ impl ShowcaseApp {
         let content_rect = self.current_content_rect();
         if self.content_panel.is_control_active() {
             match key {
-                Key::Char('h') => {
+                Key::Char('h') if self.content_panel.active_control_uses_h_as_cancel() => {
                     self.content_panel.cancel_control();
-                    self.focus_menu();
+                    self.persist_active_screen_content();
                 }
-                Key::Esc => self.content_panel.cancel_control(),
-                Key::Enter => self.content_panel.confirm_control(),
+                Key::Esc => {
+                    self.content_panel.cancel_control();
+                    self.persist_active_screen_content();
+                }
+                Key::Enter => {
+                    let operation_id = self.next_operation_id();
+                    if let Some(request) = self
+                        .content_panel
+                        .confirm_control(operation_id, self.active_screen)
+                    {
+                        self.submit_operation(request);
+                    }
+                    self.persist_active_screen_content();
+                }
+                Key::Char('l') if self.content_panel.active_control_uses_l_as_confirm() => {
+                    let operation_id = self.next_operation_id();
+                    if let Some(request) = self
+                        .content_panel
+                        .confirm_control(operation_id, self.active_screen)
+                    {
+                        self.submit_operation(request);
+                    }
+                    self.persist_active_screen_content();
+                }
                 Key::Left => {
-                    let _ = self.content_panel.handle_control_key(key);
+                    if self.content_panel.handle_control_key(key) {
+                        self.persist_active_screen_content();
+                    }
                 }
                 Key::Right | Key::Char('l') => {
-                    let _ = self.content_panel.handle_control_key(key);
+                    if self.content_panel.handle_control_key(key) {
+                        self.persist_active_screen_content();
+                    }
                 }
                 _ => {
-                    let _ = self.content_panel.handle_control_key(key);
+                    if self.content_panel.handle_control_key(key) {
+                        self.persist_active_screen_content();
+                    }
                 }
             }
             return;
@@ -196,7 +233,14 @@ impl ShowcaseApp {
                     .next_page(content_rect.width, content_rect.height);
             }
             Key::Char('l') | Key::Enter => {
-                let _ = self.content_panel.activate_selected_control();
+                let operation_id = self.next_operation_id();
+                if let Some(request) = self
+                    .content_panel
+                    .activate_selected_control(operation_id, self.active_screen)
+                {
+                    self.submit_operation(request);
+                }
+                self.persist_active_screen_content();
             }
             Key::Char('h') | Key::Esc => {
                 self.focus_menu();
@@ -215,6 +259,12 @@ impl ShowcaseApp {
             self.load_active_screen_content();
         }
         self.sync_panels();
+    }
+
+    fn next_operation_id(&mut self) -> u64 {
+        let id = self.next_operation_id;
+        self.next_operation_id = self.next_operation_id.wrapping_add(1);
+        id
     }
 
     fn focus_menu(&mut self) {
@@ -328,6 +378,57 @@ impl ShowcaseApp {
 
         self.content_panel.set_blueprint(screen.content.clone());
         self.loaded_screen = Some(self.active_screen);
+    }
+
+    fn poll_operation_results(&mut self) {
+        while let Some(result) = self.executor.try_recv() {
+            self.apply_operation_result(result);
+        }
+    }
+
+    fn submit_operation(&mut self, request: OperationRequest) {
+        self.status_panel.set_running_result(format!(
+            "正在执行\n{}",
+            request.command
+        ));
+        self.executor.submit(request);
+    }
+
+    fn apply_operation_result(&mut self, result: OperationResult) {
+        if let Some(screen) = self.screens.get_mut(result.screen_index) {
+            let mut panel = ContentPanel::new();
+            panel.set_blueprint(screen.content.clone());
+            panel.apply_operation_result(&result);
+            screen.content = panel.blueprint().clone();
+        }
+
+        if result.screen_index == self.active_screen {
+            self.content_panel.apply_operation_result(&result);
+        }
+
+        let summary = Self::summarize_operation_output(&result);
+        if result.success {
+            self.status_panel.set_success_result(summary);
+        } else {
+            self.status_panel.set_failure_result(summary);
+        }
+    }
+
+    fn summarize_operation_output(result: &OperationResult) -> String {
+        let primary = if result.success {
+            result.stdout.as_str()
+        } else {
+            result.stderr.as_str()
+        };
+
+        let fallback = if result.success { "操作成功" } else { "操作失败" };
+
+        primary
+            .lines()
+            .map(str::trim)
+            .find(|line| !line.is_empty())
+            .unwrap_or(fallback)
+            .to_string()
     }
 
     fn current_content_rect(&self) -> Rect {
@@ -475,6 +576,83 @@ mod tests {
         app.handle_event(Event::Key(Key::Esc));
 
         assert_eq!(app.focus, FocusTarget::Menu);
+    }
+
+    #[test]
+    fn h_cancels_active_control_without_returning_to_menu() {
+        let mut app = ShowcaseApp::new(
+            ShowcaseCopy {
+                title_text: "Title",
+                status_controls: "Controls",
+            },
+            vec![ShowcaseScreen {
+                title: "One",
+                content: ContentBlueprint::new("One").with_sections(vec![ContentSection::new("概览")
+                    .with_blocks(vec![ContentBlock::select("B", ["One", "Two"], 0)])]),
+            }],
+        );
+
+        app.handle_event(Event::Key(Key::Char('l')));
+        app.handle_event(Event::Key(Key::Enter));
+        assert!(app.content_panel.is_control_active());
+
+        app.handle_event(Event::Key(Key::Char('h')));
+        assert!(!app.content_panel.is_control_active());
+        assert_eq!(app.focus, FocusTarget::Content);
+    }
+
+    #[test]
+    fn l_confirms_active_select_control() {
+        let mut app = ShowcaseApp::new(
+            ShowcaseCopy {
+                title_text: "Title",
+                status_controls: "Controls",
+            },
+            vec![ShowcaseScreen {
+                title: "One",
+                content: ContentBlueprint::new("One").with_sections(vec![ContentSection::new("概览")
+                    .with_blocks(vec![ContentBlock::select("B", ["One", "Two"], 0)])]),
+            }],
+        );
+
+        app.handle_event(Event::Key(Key::Char('l')));
+        app.handle_event(Event::Key(Key::Enter));
+        assert!(app.content_panel.is_control_active());
+
+        app.handle_event(Event::Key(Key::Char('l')));
+        assert!(!app.content_panel.is_control_active());
+        match &app.content_panel.blueprint().sections[0].blocks[0].control {
+            crate::components::ContentControl::Select(control) => assert_eq!(control.selected, 0),
+            _ => panic!("expected select"),
+        }
+    }
+
+    #[test]
+    fn h_is_typed_inside_active_text_input() {
+        let mut app = ShowcaseApp::new(
+            ShowcaseCopy {
+                title_text: "Title",
+                status_controls: "Controls",
+            },
+            vec![ShowcaseScreen {
+                title: "One",
+                content: ContentBlueprint::new("One").with_sections(vec![ContentSection::new("概览")
+                    .with_blocks(vec![ContentBlock::text_input("Name", "", "输入")])]),
+            }],
+        );
+
+        app.handle_event(Event::Key(Key::Char('l')));
+        app.handle_event(Event::Key(Key::Enter));
+        assert!(app.content_panel.is_control_active());
+
+        app.handle_event(Event::Key(Key::Char('h')));
+        assert!(app.content_panel.is_control_active());
+        match &app.content_panel.blueprint().sections[0].blocks[0].control {
+            crate::components::ContentControl::TextInput(control) => {
+                assert_eq!(control.value, "h")
+            }
+            _ => panic!("expected text input"),
+        }
     }
 
     #[test]

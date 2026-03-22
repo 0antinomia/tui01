@@ -1,8 +1,10 @@
 //! 右下内容区域组件
 
 use crate::components::{
-    Component, ControlKind, SelectControl, TextInputControl, ToggleControl,
+    ActionButtonControl, Component, ControlFeedback, ControlKind, DataDisplayControl,
+    LogOutputControl, NumberInputControl, SelectControl, TextInputControl, ToggleControl,
 };
+use crate::executor::{OperationRequest, OperationResult};
 use crate::event::Key;
 use ratatui::{
     layout::Rect,
@@ -10,6 +12,7 @@ use ratatui::{
     widgets::Paragraph,
     Frame,
 };
+use std::time::Instant;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,17 +57,23 @@ impl ContentSection {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContentBlock {
+    pub id: Option<String>,
     pub label: String,
     pub control: ContentControl,
     pub height_units: u16,
+    pub operation: Option<OperationSpec>,
+    pub status: OperationStatus,
 }
 
 impl ContentBlock {
     pub fn description(text: impl Into<String>) -> Self {
         Self {
+            id: None,
             label: text.into(),
             control: ContentControl::StaticText(String::new()),
             height_units: 1,
+            operation: None,
+            status: OperationStatus::Idle,
         }
     }
 
@@ -74,9 +83,12 @@ impl ContentBlock {
         placeholder: impl Into<String>,
     ) -> Self {
         Self {
+            id: None,
             label: label.into(),
             control: ContentControl::TextInput(TextInputControl::new(value, placeholder)),
             height_units: 1,
+            operation: None,
+            status: OperationStatus::Idle,
         }
     }
 
@@ -86,25 +98,104 @@ impl ContentBlock {
         selected: usize,
     ) -> Self {
         Self {
+            id: None,
             label: label.into(),
             control: ContentControl::Select(SelectControl::new(options, selected)),
             height_units: 1,
+            operation: None,
+            status: OperationStatus::Idle,
         }
     }
 
     pub fn toggle(label: impl Into<String>, on: bool) -> Self {
         Self {
+            id: None,
             label: label.into(),
             control: ContentControl::Toggle(ToggleControl::new(on)),
             height_units: 1,
+            operation: None,
+            status: OperationStatus::Idle,
+        }
+    }
+
+    pub fn number_input(
+        label: impl Into<String>,
+        value: impl Into<String>,
+        placeholder: impl Into<String>,
+    ) -> Self {
+        Self {
+            id: None,
+            label: label.into(),
+            control: ContentControl::NumberInput(NumberInputControl::new(value, placeholder)),
+            height_units: 1,
+            operation: None,
+            status: OperationStatus::Idle,
+        }
+    }
+
+    pub fn action_button(label: impl Into<String>, button_label: impl Into<String>) -> Self {
+        Self {
+            id: None,
+            label: label.into(),
+            control: ContentControl::ActionButton(ActionButtonControl::new(button_label)),
+            height_units: 1,
+            operation: None,
+            status: OperationStatus::Idle,
+        }
+    }
+
+    pub fn refresh_button(label: impl Into<String>, button_label: impl Into<String>) -> Self {
+        Self {
+            id: None,
+            label: label.into(),
+            control: ContentControl::ActionButton(ActionButtonControl::refresh(button_label)),
+            height_units: 1,
+            operation: None,
+            status: OperationStatus::Idle,
+        }
+    }
+
+    pub fn static_data(label: impl Into<String>, value: impl Into<String>) -> Self {
+        Self {
+            id: None,
+            label: label.into(),
+            control: ContentControl::StaticData(DataDisplayControl::new(value)),
+            height_units: 1,
+            operation: None,
+            status: OperationStatus::Idle,
+        }
+    }
+
+    pub fn dynamic_data(label: impl Into<String>, value: impl Into<String>) -> Self {
+        Self {
+            id: None,
+            label: label.into(),
+            control: ContentControl::DynamicData(DataDisplayControl::new(value)),
+            height_units: 1,
+            operation: None,
+            status: OperationStatus::Idle,
+        }
+    }
+
+    pub fn log_output(label: impl Into<String>, content: impl Into<String>) -> Self {
+        Self {
+            id: None,
+            label: label.into(),
+            control: ContentControl::LogOutput(LogOutputControl::new(content)),
+            height_units: 4,
+            operation: None,
+            status: OperationStatus::Idle,
         }
     }
 
     pub fn static_text(label: impl Into<String>, value: impl Into<String>) -> Self {
         Self {
+            id: None,
             label: label.into(),
             control: ContentControl::StaticText(value.into()),
             height_units: 1,
+            operation: None,
+            status: OperationStatus::Idle,
         }
     }
 
@@ -119,21 +210,176 @@ impl ContentBlock {
         self
     }
 
+    pub fn with_id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
     pub fn with_height_units(mut self, height_units: u16) -> Self {
         self.height_units = height_units.max(1);
+        self
+    }
+
+    pub fn with_operation_success(mut self, duration_ms: u64) -> Self {
+        let target = self.operation.as_ref().and_then(|spec| spec.result_target.clone());
+        let mut spec = OperationSpec::simulated_success(duration_ms);
+        spec.result_target = target;
+        self.operation = Some(spec);
+        self
+    }
+
+    pub fn with_operation_failure(mut self, duration_ms: u64) -> Self {
+        let target = self.operation.as_ref().and_then(|spec| spec.result_target.clone());
+        let mut spec = OperationSpec::simulated_failure(duration_ms);
+        spec.result_target = target;
+        self.operation = Some(spec);
+        self
+    }
+
+    pub fn with_shell_command(mut self, command: impl Into<String>) -> Self {
+        let target = self.operation.as_ref().and_then(|spec| spec.result_target.clone());
+        let mut spec = OperationSpec::shell(command);
+        spec.result_target = target;
+        self.operation = Some(spec);
+        self
+    }
+
+    pub fn with_result_target(mut self, target_id: impl Into<String>) -> Self {
+        let target_id = target_id.into();
+        let spec = self.operation.get_or_insert_with(|| OperationSpec::shell("true"));
+        spec.result_target = Some(target_id);
         self
     }
 
     fn row_height(&self) -> usize {
         self.height_units.max(1) as usize * 3
     }
+
+    fn start_operation(
+        &mut self,
+        operation_id: u64,
+        screen_index: usize,
+        block_index: usize,
+    ) -> Option<OperationRequest> {
+        let original_control = self.control.clone();
+        let pending_control = self.control.clone();
+        self.start_operation_with_controls(
+            operation_id,
+            screen_index,
+            block_index,
+            original_control,
+            pending_control,
+        )
+    }
+
+    fn start_operation_with_controls(
+        &mut self,
+        operation_id: u64,
+        screen_index: usize,
+        block_index: usize,
+        original_control: ContentControl,
+        pending_control: ContentControl,
+    ) -> Option<OperationRequest> {
+        let Some(spec) = self.operation.clone() else {
+            return None;
+        };
+
+        self.status = OperationStatus::Running {
+            operation_id,
+            started_at: Instant::now(),
+            original_control,
+            pending_control: pending_control.clone(),
+        };
+        Some(OperationRequest {
+            operation_id,
+            screen_index,
+            block_index,
+            command: spec.command,
+            result_target: spec.result_target,
+        })
+    }
+
+    fn is_running(&self) -> bool {
+        matches!(self.status, OperationStatus::Running { .. })
+    }
+
+    fn apply_operation_result(&mut self, result: &OperationResult) {
+        let OperationStatus::Running {
+            operation_id,
+            ref original_control,
+            ref pending_control,
+            ..
+        } = self.status
+        else {
+            return;
+        };
+
+        if operation_id != result.operation_id {
+            return;
+        }
+
+        if result.success {
+            self.control = pending_control.clone();
+            self.status = OperationStatus::Success;
+        } else {
+            self.control = original_control.clone();
+            self.status = OperationStatus::Failure;
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OperationSpec {
+    pub command: String,
+    pub result_target: Option<String>,
+}
+
+impl OperationSpec {
+    pub fn shell(command: impl Into<String>) -> Self {
+        Self {
+            command: command.into(),
+            result_target: None,
+        }
+    }
+
+    pub fn simulated_success(duration_ms: u64) -> Self {
+        let seconds = duration_ms as f64 / 1000.0;
+        Self::shell(format!(
+            "sleep {seconds:.3}; printf '操作成功\\n'; exit 0"
+        ))
+    }
+
+    pub fn simulated_failure(duration_ms: u64) -> Self {
+        let seconds = duration_ms as f64 / 1000.0;
+        Self::shell(format!(
+            "sleep {seconds:.3}; printf '操作失败\\n' >&2; exit 1"
+        ))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OperationStatus {
+    Idle,
+    Running {
+        operation_id: u64,
+        started_at: Instant,
+        original_control: ContentControl,
+        pending_control: ContentControl,
+    },
+    Success,
+    Failure,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ContentControl {
     TextInput(TextInputControl),
+    NumberInput(NumberInputControl),
     Select(SelectControl),
     Toggle(ToggleControl),
+    ActionButton(ActionButtonControl),
+    StaticData(DataDisplayControl),
+    DynamicData(DataDisplayControl),
+    LogOutput(LogOutputControl),
     StaticText(String),
 }
 
@@ -144,19 +390,35 @@ impl ContentControl {
         buf: &mut ratatui::buffer::Buffer,
         selected: bool,
         active: bool,
+        feedback: ControlFeedback,
     ) {
         match self {
             Self::TextInput(control) => {
-                ControlKind::TextInput(control.clone()).render(area, buf, selected, active)
+                ControlKind::TextInput(control.clone()).render(area, buf, selected, active, feedback)
             }
+            Self::NumberInput(control) => ControlKind::NumberInput(control.clone()).render(
+                area, buf, selected, active, feedback,
+            ),
             Self::Select(control) => {
-                ControlKind::Select(control.clone()).render(area, buf, selected, active)
+                ControlKind::Select(control.clone()).render(area, buf, selected, active, feedback)
             }
             Self::Toggle(control) => {
-                ControlKind::Toggle(control.clone()).render(area, buf, selected, active)
+                ControlKind::Toggle(control.clone()).render(area, buf, selected, active, feedback)
+            }
+            Self::ActionButton(control) => ControlKind::ActionButton(control.clone()).render(
+                area, buf, selected, active, feedback,
+            ),
+            Self::StaticData(control) => {
+                ControlKind::StaticData(control.clone()).render(area, buf, selected, active, feedback)
+            }
+            Self::DynamicData(control) => ControlKind::DynamicData(control.clone()).render(
+                area, buf, selected, active, feedback,
+            ),
+            Self::LogOutput(control) => {
+                ControlKind::LogOutput(control.clone()).render(area, buf, selected, active, feedback)
             }
             Self::StaticText(text) => {
-                ControlKind::StaticText(text.clone()).render(area, buf, selected, active)
+                ControlKind::StaticText(text.clone()).render(area, buf, selected, active, feedback)
             }
         }
     }
@@ -164,8 +426,11 @@ impl ContentControl {
     fn handle_key(&mut self, key: Key) -> bool {
         match self {
             Self::TextInput(control) => control.handle_key(key),
+            Self::NumberInput(control) => control.handle_key(key),
             Self::Select(control) => control.handle_key(key),
             Self::Toggle(control) => control.handle_key(key),
+            Self::ActionButton(control) => control.handle_key(key),
+            Self::StaticData(_) | Self::DynamicData(_) | Self::LogOutput(_) => false,
             Self::StaticText(_) => false,
         }
     }
@@ -186,8 +451,13 @@ struct VisibleBlock {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SelectedControlKind {
     TextInput,
+    NumberInput,
     Select,
     Toggle,
+    ActionButton,
+    StaticData,
+    DynamicData,
+    LogOutput,
     StaticText,
 }
 
@@ -204,6 +474,7 @@ pub struct ContentPanel {
     focused: bool,
     control_active: bool,
     control_snapshot: Option<ContentControl>,
+    spinner_tick: usize,
 }
 
 impl ContentPanel {
@@ -221,6 +492,7 @@ impl ContentPanel {
             focused: false,
             control_active: false,
             control_snapshot: None,
+            spinner_tick: 0,
         }
     }
 
@@ -229,10 +501,12 @@ impl ContentPanel {
         self.blueprint = blueprint;
 
         if content_changed {
+            self.clear_all_statuses();
             self.current_page = 0;
             self.selected_block = 0;
             self.control_active = false;
             self.control_snapshot = None;
+            self.spinner_tick = 0;
         }
     }
 
@@ -277,6 +551,7 @@ impl ContentPanel {
     pub fn next_page(&mut self, width: u16, height: u16) {
         let total_pages = self.total_pages(width, height);
         if self.current_page + 1 < total_pages {
+            self.clear_all_statuses();
             self.current_page += 1;
             self.control_active = false;
             self.control_snapshot = None;
@@ -286,6 +561,7 @@ impl ContentPanel {
 
     pub fn previous_page(&mut self) {
         if self.current_page > 0 {
+            self.clear_all_statuses();
             self.current_page -= 1;
             self.control_active = false;
             self.control_snapshot = None;
@@ -309,35 +585,78 @@ impl ContentPanel {
         !self.current_page_block_indices(height).is_empty()
     }
 
+    pub fn tick(&mut self) {
+        self.spinner_tick = self.spinner_tick.wrapping_add(1);
+    }
+
+    fn clear_all_statuses(&mut self) {
+        for section in &mut self.blueprint.sections {
+            for block in &mut section.blocks {
+                block.status = OperationStatus::Idle;
+            }
+        }
+    }
+
     pub fn ensure_visible_selection(&mut self, height: u16) {
         self.clamp_selection_to_page(height);
     }
 
     pub fn handle_control_key(&mut self, key: Key) -> bool {
+        if self
+            .selected_block_ref()
+            .map(|block| block.is_running())
+            .unwrap_or(false)
+        {
+            return false;
+        }
+
         self.selected_block_mut()
             .map(|block| block.control.handle_key(key))
             .unwrap_or(false)
     }
 
-    pub fn activate_selected_control(&mut self) -> bool {
+    pub fn activate_selected_control(
+        &mut self,
+        operation_id: u64,
+        screen_index: usize,
+    ) -> Option<OperationRequest> {
         match self.selected_control_kind() {
-            Some(SelectedControlKind::TextInput | SelectedControlKind::Select) => {
+            Some(
+                SelectedControlKind::TextInput
+                | SelectedControlKind::NumberInput
+                | SelectedControlKind::Select
+                | SelectedControlKind::LogOutput,
+            ) => {
                 self.control_snapshot = self.selected_block_ref().map(|block| block.control.clone());
                 self.control_active = true;
-                true
+                None
             }
             Some(SelectedControlKind::Toggle) => {
                 self.control_active = false;
                 self.control_snapshot = None;
-                self.handle_control_key(Key::Enter)
+                self.toggle_selected_control(operation_id, screen_index)
             }
-            Some(SelectedControlKind::StaticText) | None => false,
+            Some(SelectedControlKind::ActionButton) => {
+                self.control_active = false;
+                self.control_snapshot = None;
+                self.start_selected_action(operation_id, screen_index)
+            }
+            Some(
+                SelectedControlKind::StaticData
+                | SelectedControlKind::DynamicData
+                | SelectedControlKind::StaticText,
+            )
+            | None => None,
         }
     }
 
-    pub fn confirm_control(&mut self) {
+    pub fn confirm_control(
+        &mut self,
+        operation_id: u64,
+        screen_index: usize,
+    ) -> Option<OperationRequest> {
         self.control_active = false;
-        self.control_snapshot = None;
+        self.confirm_selected_control(operation_id, screen_index)
     }
 
     pub fn cancel_control(&mut self) {
@@ -351,6 +670,104 @@ impl ContentPanel {
 
     pub fn is_control_active(&self) -> bool {
         self.control_active
+    }
+
+    pub fn active_control_uses_l_as_confirm(&self) -> bool {
+        matches!(
+            self.selected_control_kind(),
+            Some(SelectedControlKind::Select | SelectedControlKind::LogOutput)
+        )
+    }
+
+    pub fn active_control_uses_h_as_cancel(&self) -> bool {
+        !matches!(
+            self.selected_control_kind(),
+            Some(SelectedControlKind::TextInput | SelectedControlKind::NumberInput)
+        )
+    }
+
+    fn confirm_selected_control(
+        &mut self,
+        operation_id: u64,
+        screen_index: usize,
+    ) -> Option<OperationRequest> {
+        let snapshot = self.control_snapshot.take();
+        let block_index = self.selected_block;
+        let Some(block) = self.selected_block_mut() else {
+            return None;
+        };
+
+        if block.is_running() {
+            return None;
+        }
+
+        if block.operation.is_some() {
+            if let Some(original) = snapshot {
+                let pending = block.control.clone();
+                return block.start_operation_with_controls(
+                    operation_id,
+                    screen_index,
+                    block_index,
+                    original,
+                    pending,
+                );
+            }
+            return block.start_operation(operation_id, screen_index, block_index);
+        }
+
+        None
+    }
+
+    fn toggle_selected_control(
+        &mut self,
+        operation_id: u64,
+        screen_index: usize,
+    ) -> Option<OperationRequest> {
+        let block_index = self.selected_block;
+        let Some(block) = self.selected_block_mut() else {
+            return None;
+        };
+
+        if block.is_running() {
+            return None;
+        }
+
+        let mut pending = block.control.clone();
+        let changed = pending.handle_key(Key::Enter);
+        if !changed {
+            return None;
+        }
+
+        if block.operation.is_some() {
+            let original = block.control.clone();
+            block.start_operation_with_controls(
+                operation_id,
+                screen_index,
+                block_index,
+                original,
+                pending,
+            )
+        } else {
+            block.control = pending;
+            None
+        }
+    }
+
+    fn start_selected_action(
+        &mut self,
+        operation_id: u64,
+        screen_index: usize,
+    ) -> Option<OperationRequest> {
+        let block_index = self.selected_block;
+        let Some(block) = self.selected_block_mut() else {
+            return None;
+        };
+
+        if block.is_running() {
+            return None;
+        }
+
+        block.start_operation(operation_id, screen_index, block_index)
     }
 
     pub fn select_next_block(&mut self, height: u16) {
@@ -550,6 +967,71 @@ impl ContentPanel {
         None
     }
 
+    fn block_mut_by_index(&mut self, target_index: usize) -> Option<&mut ContentBlock> {
+        let mut index = 0usize;
+        for section in &mut self.blueprint.sections {
+            for block in &mut section.blocks {
+                if index == target_index {
+                    return Some(block);
+                }
+                index += 1;
+            }
+        }
+        None
+    }
+
+    fn block_mut_by_id(&mut self, target_id: &str) -> Option<&mut ContentBlock> {
+        for section in &mut self.blueprint.sections {
+            for block in &mut section.blocks {
+                if block.id.as_deref() == Some(target_id) {
+                    return Some(block);
+                }
+            }
+        }
+        None
+    }
+
+    pub fn apply_operation_result(&mut self, result: &OperationResult) {
+        if let Some(block) = self.block_mut_by_index(result.block_index) {
+            block.apply_operation_result(result);
+        }
+
+        if let Some(target_id) = result.result_target.as_deref() {
+            if let Some(block) = self.block_mut_by_id(target_id) {
+                if let ContentControl::LogOutput(log) = &mut block.control {
+                    log.append_entry(Self::format_result_output(result));
+                }
+            }
+        }
+    }
+
+    fn format_result_output(result: &OperationResult) -> String {
+        let mut parts = Vec::new();
+        parts.push(if result.success {
+            "[success]".to_string()
+        } else {
+            "[failure]".to_string()
+        });
+
+        if !result.stdout.is_empty() {
+            parts.push(result.stdout.clone());
+        }
+
+        if !result.stderr.is_empty() {
+            parts.push(result.stderr.clone());
+        }
+
+        if parts.len() == 1 {
+            parts.push(if result.success {
+                "操作成功".to_string()
+            } else {
+                "操作失败".to_string()
+            });
+        }
+
+        parts.join("\n")
+    }
+
     fn selected_control_kind(&self) -> Option<SelectedControlKind> {
         self.blueprint
             .sections
@@ -558,8 +1040,13 @@ impl ContentPanel {
             .nth(self.selected_block)
             .map(|block| match block.control {
                 ContentControl::TextInput(_) => SelectedControlKind::TextInput,
+                ContentControl::NumberInput(_) => SelectedControlKind::NumberInput,
                 ContentControl::Select(_) => SelectedControlKind::Select,
                 ContentControl::Toggle(_) => SelectedControlKind::Toggle,
+                ContentControl::ActionButton(_) => SelectedControlKind::ActionButton,
+                ContentControl::StaticData(_) => SelectedControlKind::StaticData,
+                ContentControl::DynamicData(_) => SelectedControlKind::DynamicData,
+                ContentControl::LogOutput(_) => SelectedControlKind::LogOutput,
                 ContentControl::StaticText(_) => SelectedControlKind::StaticText,
             })
     }
@@ -663,10 +1150,8 @@ impl ContentPanel {
 
         let content_width = blocks_rect.width.saturating_sub(2);
         let distributable = content_width.saturating_sub(Self::COLUMN_GAP);
-        let left_width = (distributable * 3 / 10).max(1);
-        let control_width = content_width
-            .saturating_sub(Self::COLUMN_GAP)
-            .saturating_sub(left_width);
+        let text_width = (distributable * 3 / 10).max(1);
+        let control_width = distributable.saturating_sub(text_width);
 
         let mut cursor_y = blocks_rect.y;
         for block in &page.blocks {
@@ -681,7 +1166,7 @@ impl ContentPanel {
                 f,
                 block_rect,
                 &block.block,
-                left_width,
+                text_width,
                 control_width,
                 block.index == self.selected_block,
             );
@@ -707,7 +1192,7 @@ impl ContentPanel {
         f: &mut Frame,
         rect: Rect,
         block: &ContentBlock,
-        left_width: u16,
+        text_width: u16,
         control_width: u16,
         selected: bool,
     ) {
@@ -716,34 +1201,37 @@ impl ContentPanel {
         }
 
         let content_rect = rect;
-        let center_y = content_rect.y + content_rect.height / 2;
-        f.buffer_mut()[(content_rect.x, center_y)]
+        let baseline_y = content_rect
+            .y
+            .saturating_add(1)
+            .min(content_rect.y + content_rect.height.saturating_sub(1));
+        f.buffer_mut()[(content_rect.x, baseline_y)]
             .set_char(if selected && self.focused {
                 '>'
             } else {
                 ' '
             })
-            .set_fg(Color::Rgb(110, 162, 202));
+            .set_fg(Color::Yellow);
 
         let text_rect = Rect::new(
             content_rect.x + 2,
             content_rect.y,
-            left_width,
+            text_width,
             content_rect.height,
         );
         let control_x = content_rect
             .x
             .saturating_add(2)
-            .saturating_add(left_width)
+            .saturating_add(text_width)
             .saturating_add(Self::COLUMN_GAP);
-        let left_width = text_rect.width as usize;
-        let truncated = Self::truncate_to_width(block.label.as_str(), left_width.max(1));
+        let label_width = text_rect.width as usize;
+        let truncated = Self::truncate_to_width(block.label.as_str(), label_width.max(1));
         self.write_text(
             f,
             text_rect.x,
-            center_y,
+            baseline_y,
             &truncated,
-            left_width.max(1),
+            label_width.max(1),
             Color::Cyan,
             if selected && self.focused {
                 Some(Style::default().add_modifier(Modifier::BOLD))
@@ -753,12 +1241,23 @@ impl ContentPanel {
         );
 
         let control_rect = Rect::new(control_x, content_rect.y, control_width, content_rect.height);
+        let feedback = self.feedback_for(&block.status);
         block.control.render(
             control_rect,
             f.buffer_mut(),
             selected && self.focused,
             selected && self.focused && self.control_active,
+            feedback,
         );
+    }
+
+    fn feedback_for(&self, status: &OperationStatus) -> ControlFeedback {
+        match status {
+            OperationStatus::Idle => ControlFeedback::Idle,
+            OperationStatus::Running { .. } => ControlFeedback::Running(self.spinner_tick),
+            OperationStatus::Success => ControlFeedback::Success,
+            OperationStatus::Failure => ControlFeedback::Failure,
+        }
     }
 
     fn truncate_chars(text: &str, max_width: usize) -> String {
@@ -904,6 +1403,7 @@ mod tests {
     use super::{
         ContentBlock, ContentBlueprint, ContentPanel, ContentSection,
     };
+    use crate::executor::OperationResult;
     use ratatui::style::Color;
 
     fn panel_with_sections() -> ContentPanel {
@@ -916,7 +1416,13 @@ mod tests {
                 ]),
                 ContentSection::new("行为").with_blocks(vec![
                     ContentBlock::select("日志级别", ["info", "debug", "trace"], 0),
+                    ContentBlock::number_input("端口", "8080", "输入端口"),
                     ContentBlock::text_input("保存路径", "/tmp", "输入路径").with_height_units(2),
+                ]),
+                ContentSection::new("动作").with_blocks(vec![
+                    ContentBlock::refresh_button("刷新列表", "刷新").with_operation_success(700),
+                    ContentBlock::static_data("版本", "v0.1.0"),
+                    ContentBlock::log_output("最近输出", "line one\nline two").with_height_units(2),
                 ]),
             ]),
         );
@@ -934,7 +1440,7 @@ mod tests {
     fn content_panel_paginates_by_block_height() {
         let panel = panel_with_sections();
 
-        assert_eq!(panel.total_pages(40, 6), 4);
+        assert_eq!(panel.total_pages(40, 6), 8);
     }
 
     #[test]
@@ -1053,7 +1559,7 @@ mod tests {
     fn activate_selected_control_enters_text_input_mode() {
         let mut panel = panel_with_sections();
 
-        assert!(panel.activate_selected_control());
+        assert!(panel.activate_selected_control(1, 0).is_none());
         assert!(panel.is_control_active());
         assert!(panel.handle_control_key(crate::event::Key::Char('x')));
 
@@ -1068,7 +1574,7 @@ mod tests {
         let mut panel = panel_with_sections();
         panel.select_next_block(13);
 
-        assert!(panel.activate_selected_control());
+        assert!(panel.activate_selected_control(1, 0).is_none());
         assert!(!panel.is_control_active());
 
         match &panel.blueprint.sections[0].blocks[1].control {
@@ -1078,12 +1584,29 @@ mod tests {
     }
 
     #[test]
+    fn number_input_enters_edit_mode_and_accepts_digits() {
+        let mut panel = panel_with_sections();
+        panel.select_next_block(13);
+        panel.select_next_block(13);
+        panel.select_next_block(13);
+
+        assert!(panel.activate_selected_control(1, 0).is_none());
+        assert!(panel.handle_control_key(crate::event::Key::Char('9')));
+        assert!(!panel.handle_control_key(crate::event::Key::Char('x')));
+
+        match &panel.blueprint.sections[1].blocks[1].control {
+            super::ContentControl::NumberInput(control) => assert_eq!(control.value, "80809"),
+            _ => panic!("expected number input"),
+        }
+    }
+
+    #[test]
     fn cancel_control_restores_previous_select_value() {
         let mut panel = panel_with_sections();
         panel.select_next_block(13);
         panel.select_next_block(13);
 
-        assert!(panel.activate_selected_control());
+        assert!(panel.activate_selected_control(1, 0).is_none());
         assert!(panel.handle_control_key(crate::event::Key::Char('j')));
         panel.cancel_control();
 
@@ -1092,5 +1615,112 @@ mod tests {
             _ => panic!("expected select"),
         }
         assert!(!panel.is_control_active());
+    }
+
+    #[test]
+    fn activate_action_button_returns_operation_request() {
+        let mut panel = panel_with_sections();
+        panel.select_next_block(13);
+        panel.select_next_block(13);
+        panel.select_next_block(13);
+        panel.select_next_block(13);
+        panel.select_next_block(13);
+
+        let request = panel.activate_selected_control(7, 2);
+        assert!(request.is_some());
+        let request = request.unwrap();
+        assert_eq!(request.operation_id, 7);
+        assert_eq!(request.screen_index, 2);
+        assert_eq!(request.block_index, 5);
+    }
+
+    #[test]
+    fn static_data_does_not_enter_edit_mode() {
+        let mut panel = panel_with_sections();
+        panel.select_next_block(13);
+        panel.select_next_block(13);
+        panel.select_next_block(13);
+        panel.select_next_block(13);
+        panel.select_next_block(13);
+        panel.select_next_block(13);
+
+        assert!(panel.activate_selected_control(9, 2).is_none());
+        assert!(!panel.is_control_active());
+    }
+
+    #[test]
+    fn log_output_enters_view_mode() {
+        let mut panel = panel_with_sections();
+        for _ in 0..7 {
+            panel.select_next_block(13);
+        }
+
+        assert!(panel.activate_selected_control(10, 2).is_none());
+        assert!(panel.is_control_active());
+    }
+
+    #[test]
+    fn operation_result_updates_bound_log_output() {
+        let mut panel = ContentPanel::new();
+        panel.set_blueprint(
+            ContentBlueprint::new("Root").with_sections(vec![ContentSection::new("动作").with_blocks(vec![
+                ContentBlock::action_button("执行同步", "执行")
+                    .with_id("run_sync")
+                    .with_result_target("sync_log")
+                    .with_shell_command("printf 'done\\n'"),
+                ContentBlock::log_output("输出", "等待操作").with_id("sync_log"),
+            ])]),
+        );
+
+        let request = panel.activate_selected_control(11, 0).unwrap();
+        assert_eq!(request.result_target.as_deref(), Some("sync_log"));
+
+        panel.apply_operation_result(&OperationResult {
+            operation_id: 11,
+            screen_index: 0,
+            block_index: 0,
+            result_target: Some("sync_log".to_string()),
+            success: true,
+            stdout: "done".to_string(),
+            stderr: String::new(),
+        });
+
+        match &panel.blueprint.sections[0].blocks[1].control {
+            super::ContentControl::LogOutput(log) => assert!(log.content.contains("done")),
+            _ => panic!("expected log output"),
+        }
+    }
+
+    #[test]
+    fn operation_result_appends_to_existing_log_output() {
+        let mut panel = ContentPanel::new();
+        panel.set_blueprint(
+            ContentBlueprint::new("Root").with_sections(vec![ContentSection::new("动作").with_blocks(vec![
+                ContentBlock::action_button("执行同步", "执行")
+                    .with_id("run_sync")
+                    .with_result_target("sync_log")
+                    .with_shell_command("printf 'done\\n'"),
+                ContentBlock::log_output("输出", "previous line").with_id("sync_log"),
+            ])]),
+        );
+
+        panel.apply_operation_result(&OperationResult {
+            operation_id: 12,
+            screen_index: 0,
+            block_index: 0,
+            result_target: Some("sync_log".to_string()),
+            success: true,
+            stdout: "done".to_string(),
+            stderr: String::new(),
+        });
+
+        match &panel.blueprint.sections[0].blocks[1].control {
+            super::ContentControl::LogOutput(log) => {
+                assert!(log.content.contains("previous line"));
+                assert!(log.content.contains("[success]"));
+                assert!(log.content.contains("done"));
+            }
+            _ => panic!("expected log output"),
+        }
     }
 }

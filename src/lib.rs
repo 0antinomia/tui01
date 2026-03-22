@@ -5,6 +5,7 @@
 pub mod action;
 pub mod app;
 pub mod components;
+pub mod executor;
 pub mod event;
 pub mod showcase;
 pub mod tui;

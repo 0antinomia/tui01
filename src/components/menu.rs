@@ -235,6 +235,16 @@ impl MenuComponent {
     pub fn state_mut(&mut self) -> &mut MenuState {
         &mut self.state
     }
+
+    fn item_style(&self, idx: usize, local_selected: usize) -> Style {
+        if idx == local_selected {
+            Style::default().fg(Color::White).bg(Color::Rgb(52, 86, 112))
+        } else if self.focused {
+            Style::default().fg(Color::White)
+        } else {
+            Style::default().fg(Color::DarkGray)
+        }
+    }
 }
 
 impl Component for MenuComponent {
@@ -319,11 +329,7 @@ impl Component for MenuComponent {
                 break;
             }
 
-            let style = if idx == local_selected {
-                Style::default().fg(Color::White).bg(Color::Rgb(52, 86, 112))
-            } else {
-                Style::default().fg(Color::White)
-            };
+            let style = self.item_style(idx, local_selected);
 
             let para = Paragraph::new(label.as_str())
                 .alignment(Alignment::Center)
@@ -397,6 +403,17 @@ mod tests {
 
         assert_eq!(action, Action::Noop);
         assert_eq!(menu.selected_index(), 0);
+    }
+
+    #[test]
+    fn unfocused_menu_dims_non_selected_items() {
+        let menu = MenuComponent::new(make_items(3));
+
+        let selected = menu.item_style(0, 0);
+        let other = menu.item_style(1, 0);
+
+        assert_eq!(selected.fg, Some(Color::White));
+        assert_eq!(other.fg, Some(Color::DarkGray));
     }
 
     #[test]
