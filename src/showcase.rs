@@ -116,7 +116,12 @@ impl ShowcaseApp {
             screens,
             active_screen: 0,
             loaded_screen: None,
-            executor: OperationExecutor::with_registry(registry),
+            executor: OperationExecutor::with_runtime(
+                registry,
+                host.shell_policy(),
+                host.event_hook(),
+                host.logger(),
+            ),
             host,
             next_operation_id: 1,
             copy,
@@ -183,7 +188,7 @@ impl ShowcaseApp {
         let command = command.into();
         self.host
             .register_shell_action(name.clone(), command.clone());
-        self.executor = OperationExecutor::with_registry(self.host.action_registry());
+        self.refresh_executor();
     }
 
     pub fn register_action_handler<F, Fut>(&mut self, name: impl Into<String>, handler: F)
@@ -192,7 +197,7 @@ impl ShowcaseApp {
         Fut: std::future::Future<Output = ActionOutcome> + Send + 'static,
     {
         self.host.register_action_handler(name.into(), handler);
-        self.executor = OperationExecutor::with_registry(self.host.action_registry());
+        self.refresh_executor();
     }
 
     pub fn host(&self) -> &RuntimeHost {
@@ -237,6 +242,15 @@ impl ShowcaseApp {
             FocusTarget::Menu => self.handle_menu_key(key),
             FocusTarget::Content => self.handle_content_key(key),
         }
+    }
+
+    fn refresh_executor(&mut self) {
+        self.executor = OperationExecutor::with_runtime(
+            self.host.action_registry(),
+            self.host.shell_policy(),
+            self.host.event_hook(),
+            self.host.logger(),
+        );
     }
 
     fn handle_menu_key(&mut self, key: Key) {
@@ -500,6 +514,14 @@ impl ShowcaseApp {
                 .and_then(|path| path.to_str())
                 .map(str::to_string),
             env: self.host.shell().env().clone(),
+            allowed_working_dirs: self
+                .host
+                .execution_policy()
+                .allowed_working_dirs()
+                .iter()
+                .filter_map(|path| path.to_str().map(str::to_string))
+                .collect(),
+            allowed_env_keys: self.host.execution_policy().allowed_env_keys().cloned(),
             ..request
         });
     }

@@ -1,0 +1,59 @@
+title_text: |
+  TUI01 Host Template
+
+  这是一个最小宿主集成样板。
+status_controls: |
+  Controls:
+  ↑/↓ 或 j/k 当前焦点内移动
+  Shift+J/K 当前焦点区域翻页
+  Enter / l 进入或确认
+  Esc / h 返回
+  q 退出
+host_requirements:
+  required_context_keys:
+    - project_root
+  required_registered_actions:
+    - sync_workspace
+  required_env_keys:
+    - APP_ENV
+  requires_working_dir: true
+screens:
+  - title: Workspace
+    page:
+      title: Workspace
+      sections:
+        - title: 基础配置
+          fields:
+            - label: 项目名
+              id: project_name
+              control:
+                type: text_input
+                value: tui01
+                placeholder: 输入项目名
+            - label: 端口
+              id: server_port
+              control:
+                type: number_input
+                value: "3000"
+                placeholder: 输入端口
+            - label: 启用缓存
+              control:
+                type: toggle
+                on: true
+        - title: 操作
+          fields:
+            - label: 同步工作区
+              id: sync_action
+              control:
+                type: refresh_button
+                button_label: 同步
+              operation:
+                kind: registered_action
+                name: sync_workspace
+                result_target: workspace_log
+            - label: 输出
+              id: workspace_log
+              height_units: 4
+              control:
+                type: log_output
+                content: 等待执行结果

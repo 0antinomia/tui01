@@ -1,6 +1,7 @@
 //! Serializable external configuration format.
 
 use crate::builder::{page, screen, section, AppSpec};
+use crate::host::{RuntimeHost, ShellPolicy};
 use crate::schema::FieldSpec;
 use crate::showcase::ShowcaseApp;
 use mlua::LuaSerdeExt;
@@ -49,8 +50,63 @@ pub struct AppConfig {
     pub title_text: String,
     pub status_controls: String,
     #[serde(default)]
+    pub host_requirements: HostRequirementsConfig,
+    #[serde(default)]
     pub screens: Vec<ScreenConfig>,
 }
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct HostRequirementsConfig {
+    #[serde(default)]
+    pub required_context_keys: Vec<String>,
+    #[serde(default)]
+    pub required_registered_actions: Vec<String>,
+    #[serde(default)]
+    pub required_env_keys: Vec<String>,
+    #[serde(default)]
+    pub requires_working_dir: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HostCompatibilityError {
+    MissingContextKey(String),
+    MissingRegisteredAction(String),
+    MissingWorkingDir,
+    MissingEnvKey(String),
+    InlineShellNotAllowed,
+    WorkingDirNotAllowed(String),
+    EnvKeyNotAllowed(String),
+}
+
+impl std::fmt::Display for HostCompatibilityError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MissingContextKey(key) => write!(f, "missing required host context key: {key}"),
+            Self::MissingRegisteredAction(action) => {
+                write!(f, "missing required registered action: {action}")
+            }
+            Self::MissingWorkingDir => write!(f, "host working directory is required"),
+            Self::MissingEnvKey(key) => write!(f, "missing required host env key: {key}"),
+            Self::InlineShellNotAllowed => {
+                write!(
+                    f,
+                    "config uses inline shell operations but host policy disallows them"
+                )
+            }
+            Self::WorkingDirNotAllowed(path) => {
+                write!(
+                    f,
+                    "host working directory is outside allowed policy: {path}"
+                )
+            }
+            Self::EnvKeyNotAllowed(key) => {
+                write!(f, "host env key is outside allowed policy: {key}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for HostCompatibilityError {}
 
 impl AppConfig {
     /// Parse configuration from a JSON string.
@@ -117,8 +173,72 @@ impl AppConfig {
         )
     }
 
+    pub fn validate_against_host(&self, host: &RuntimeHost) -> Result<(), HostCompatibilityError> {
+        for key in &self.host_requirements.required_context_keys {
+            if host.context_value(key).is_none() {
+                return Err(HostCompatibilityError::MissingContextKey(key.clone()));
+            }
+        }
+
+        for action in &self.host_requirements.required_registered_actions {
+            if !host.has_action(action) {
+                return Err(HostCompatibilityError::MissingRegisteredAction(
+                    action.clone(),
+                ));
+            }
+        }
+
+        if self.host_requirements.requires_working_dir && host.working_dir().is_none() {
+            return Err(HostCompatibilityError::MissingWorkingDir);
+        }
+
+        for key in &self.host_requirements.required_env_keys {
+            if !host.shell().env().contains_key(key) {
+                return Err(HostCompatibilityError::MissingEnvKey(key.clone()));
+            }
+        }
+
+        if self.uses_inline_shell() && host.shell_policy() != ShellPolicy::AllowAll {
+            return Err(HostCompatibilityError::InlineShellNotAllowed);
+        }
+
+        if let Some(cwd) = host.working_dir().and_then(|path| path.to_str()) {
+            let allowed = host.execution_policy().allowed_working_dirs();
+            if !allowed.is_empty()
+                && !allowed
+                    .iter()
+                    .any(|allowed| std::path::Path::new(cwd).starts_with(allowed))
+            {
+                return Err(HostCompatibilityError::WorkingDirNotAllowed(
+                    cwd.to_string(),
+                ));
+            }
+        }
+
+        if let Some(allowed) = host.execution_policy().allowed_env_keys() {
+            for key in host.shell().env().keys() {
+                if !allowed.contains(key) {
+                    return Err(HostCompatibilityError::EnvKeyNotAllowed(key.clone()));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn into_showcase_app(self) -> ShowcaseApp {
         self.into_app_spec().into_showcase_app()
+    }
+
+    fn uses_inline_shell(&self) -> bool {
+        self.screens.iter().any(|screen| {
+            screen.page.sections.iter().any(|section| {
+                section
+                    .fields
+                    .iter()
+                    .any(|field| matches!(field.operation, Some(OperationConfig::Shell { .. })))
+            })
+        })
     }
 }
 
@@ -331,7 +451,8 @@ impl OperationConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::{AppConfig, ConfigLoadError};
+    use super::{AppConfig, ConfigLoadError, HostCompatibilityError};
+    use crate::host::{RuntimeHost, ShellPolicy};
     use std::{
         fs,
         time::{SystemTime, UNIX_EPOCH},
@@ -517,5 +638,54 @@ screens:
         let config = AppConfig::from_yaml_str(yaml).unwrap();
         let app = config.into_showcase_app();
         assert_eq!(app.active_screen(), 0);
+    }
+
+    #[test]
+    fn config_host_requirements_reject_missing_context_key() {
+        let yaml = r#"
+title_text: Demo
+status_controls: Controls
+host_requirements:
+  required_context_keys:
+    - project_root
+screens: []
+"#;
+
+        let config = AppConfig::from_yaml_str(yaml).unwrap();
+        let host = RuntimeHost::new();
+        let err = config.validate_against_host(&host).unwrap_err();
+
+        assert!(matches!(
+            err,
+            HostCompatibilityError::MissingContextKey(key) if key == "project_root"
+        ));
+    }
+
+    #[test]
+    fn config_host_requirements_reject_inline_shell_when_policy_is_registered_only() {
+        let yaml = r#"
+title_text: Demo
+status_controls: Controls
+screens:
+  - title: Workspace
+    page:
+      title: Workspace
+      sections:
+        - title: Actions
+          fields:
+            - label: 刷新
+              control:
+                type: refresh_button
+                button_label: 刷新
+              operation:
+                kind: shell
+                command: printf 'ok\n'
+"#;
+
+        let config = AppConfig::from_yaml_str(yaml).unwrap();
+        let host = RuntimeHost::new().set_shell_policy(ShellPolicy::RegisteredOnly);
+        let err = config.validate_against_host(&host).unwrap_err();
+
+        assert!(matches!(err, HostCompatibilityError::InlineShellNotAllowed));
     }
 }

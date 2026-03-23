@@ -647,6 +647,8 @@ impl ContentPanel {
             host: HashMap::new(),
             cwd: None,
             env: HashMap::new(),
+            allowed_working_dirs: vec![],
+            allowed_env_keys: None,
             result_target: command.result_target,
         })
     }

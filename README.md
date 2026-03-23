@@ -2,6 +2,8 @@
 
 `tui01` 是一个基于 `ratatui` 的四分区 TUI 框架。
 
+当前 crate 版本：`0.1.0`
+
 当前结构分成四层：
 
 - `builder`：面向使用的顶层入口
@@ -12,6 +14,13 @@
 ## 当前推荐入口
 
 优先使用 [src/builder.rs](/Users/bcsy/Desktop/myproject/tui01/src/builder.rs) 提供的 `AppSpec`、`page(...)`、`section(...)`、`screen(...)`。
+
+配套文档：
+
+- [docs/GETTING_STARTED.md](/Users/bcsy/Desktop/myproject/tui01/docs/GETTING_STARTED.md)
+- [docs/VERSIONING.md](/Users/bcsy/Desktop/myproject/tui01/docs/VERSIONING.md)
+- [docs/RELEASE_SCOPE.md](/Users/bcsy/Desktop/myproject/tui01/docs/RELEASE_SCOPE.md)
+- [CHANGELOG.md](/Users/bcsy/Desktop/myproject/tui01/CHANGELOG.md)
 
 最小示例：
 
@@ -98,17 +107,32 @@ FieldSpec::action_button("同步", "执行")
 
 ```rust
 use tui01::executor::ActionOutcome;
-use tui01::host::RuntimeHost;
+use tui01::host::{HostEvent, HostLogLevel, RuntimeHost, ShellPolicy};
 
 let mut host = RuntimeHost::new();
 host.register_action_handler("sync_workspace", |context| async move {
     let project = context.params.get("project_name").cloned().unwrap_or_default();
     ActionOutcome::success(format!("synced {project}"))
 });
-host.insert_context("project_root", "/workspace/demo");
 host = host
+    .set_context("project_root", "/workspace/demo")
     .set_working_dir("/workspace/demo")
-    .insert_env("APP_ENV", "dev");
+    .allow_working_dir("/workspace/demo")
+    .insert_env("APP_ENV", "dev")
+    .allow_env_key("APP_ENV")
+    .set_shell_policy(ShellPolicy::RegisteredOnly)
+    .on_log(|record| match record.level {
+        HostLogLevel::Info => eprintln!("[info] {}", record.message),
+        HostLogLevel::Warn => eprintln!("[warn] {}", record.message),
+        HostLogLevel::Error => eprintln!("[error] {}", record.message),
+        HostLogLevel::Debug => eprintln!("[debug] {}", record.message),
+    })
+    .on_event(|event| match event {
+        HostEvent::OperationStarted { source, .. } => eprintln!("started: {source}"),
+        HostEvent::OperationFinished { source, success, .. } => {
+            eprintln!("finished: {source} success={success}")
+        }
+    });
 
 let mut app = AppSpec::new()
     .screen(screen(
@@ -130,6 +154,11 @@ app.validate_registered_actions()?;
 - 宿主上下文 `context`
 - shell 工作目录
 - shell 环境变量
+- shell 执行策略
+- 允许的工作目录白名单
+- 允许的环境变量白名单
+- 宿主日志钩子
+- 宿主事件钩子
 
 `ShowcaseApp` 上仍然保留了 `register_*` 方法，但它们只是兼容入口。
 
@@ -189,6 +218,13 @@ screens:
               control:
                 type: log_output
                 content: 等待结果
+host_requirements:
+  required_context_keys:
+    - project_root
+  required_registered_actions: []
+  required_env_keys:
+    - APP_ENV
+  requires_working_dir: true
 ```
 
 直接从文件运行示例：
@@ -209,6 +245,25 @@ Lua 示例文件：
 cargo run --example from_config -- examples/demo.lua
 ```
 
+宿主集成模板：
+
+```bash
+cargo run --example host_template
+```
+
+对应文件：
+
+- [examples/host_template.rs](/Users/bcsy/Desktop/myproject/tui01/examples/host_template.rs)
+- [examples/host_app.yaml](/Users/bcsy/Desktop/myproject/tui01/examples/host_app.yaml)
+
+推荐工程骨架：
+
+- [templates/host_project/README.md](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/README.md)
+- [templates/host_project/main.rs](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/main.rs)
+- [templates/host_project/host.rs](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/host.rs)
+- [templates/host_project/actions.rs](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/actions.rs)
+- [templates/host_project/app.yaml](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/app.yaml)
+
 建议的接入顺序是：
 
 1. Rust 原生：`AppSpec`
@@ -227,6 +282,24 @@ cargo run --example from_config -- examples/demo.lua
 `examples/from_config.rs` 默认会在运行前执行这一步校验。
 
 如果你使用的是运行期注册的 Rust handler，而不是 `AppSpec::shell_action(...)`，则应在 host 或 app 装配完成后调用 `ShowcaseApp::validate_registered_actions()`。更推荐直接使用 `AppSpec::try_into_showcase_app_with_host(...)`。
+
+## 配置与宿主闭环
+
+`AppConfig` 现在支持声明最小宿主需求：
+
+- `required_context_keys`
+- `required_registered_actions`
+- `required_env_keys`
+- `requires_working_dir`
+
+加载顺序建议固定成：
+
+1. 读取 `AppConfig`
+2. 构建 `RuntimeHost`
+3. 调用 `AppConfig::validate_against_host(&host)`
+4. 再调用 `try_into_showcase_app_with_host(...)`
+
+这样配置层只能声明“它需要什么”，最终是否接受仍由宿主决定。
 
 ## 当前边界
 
@@ -270,3 +343,14 @@ AppSpec::new()
 默认应优先使用 `{{field_id}}`。只有在模板本身已经明确需要原始 shell 片段，例如固定 flag 组合或你自己完成了转义时，才使用 `{{raw:...}}`。
 
 当操作走 shell 执行时，`RuntimeHost` 里的工作目录和环境变量会自动注入到底层命令执行环境；当操作走 Rust handler 时，这些值也会通过 `ActionContext.cwd` 和 `ActionContext.env` 一起传入。
+
+如果你要把框架放进真实应用环境，建议默认把 shell 策略设成 `ShellPolicy::RegisteredOnly`。这样页面里不能直接跑裸 shell，只能走宿主明确注册过的动作名。
+
+进一步收紧时，建议同时配置：
+
+- `allow_working_dir(...)`
+- `allow_env_key(...)`
+
+这样即使动作本身被允许执行，底层 shell 也只能在你明确批准的目录和环境变量范围内运行。
+
+如果你的应用已经有自己的日志系统，优先接 `RuntimeHost::on_log(...)`。它比事件钩子更适合直接落日志；事件钩子更适合做监控、通知或额外联动。
