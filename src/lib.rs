@@ -6,7 +6,6 @@ pub mod action;
 pub mod app;
 pub mod builder;
 pub mod components;
-pub mod config;
 pub mod event;
 pub mod executor;
 pub mod host;

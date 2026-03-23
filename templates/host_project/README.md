@@ -10,9 +10,8 @@ your-app/
 ├── src/
 │   ├── main.rs
 │   ├── host.rs
-│   └── actions.rs
-└── tui/
-    └── app.yaml
+│   ├── actions.rs
+│   └── app.rs
 ```
 
 职责划分：
@@ -23,12 +22,12 @@ your-app/
   负责宿主策略、日志桥、事件桥、工作目录和环境变量白名单
 - `src/actions.rs`
   负责注册具体业务动作，不把业务逻辑散落在 `main.rs`
-- `tui/app.yaml`
-  负责页面结构和宿主需求声明
+- `src/app.rs`
+  负责页面结构和 `AppSpec` 定义
 
 参考文件：
 
 - [main.rs](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/main.rs)
 - [host.rs](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/host.rs)
 - [actions.rs](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/actions.rs)
-- [app.yaml](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/app.yaml)
+- [app.rs](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/app.rs)

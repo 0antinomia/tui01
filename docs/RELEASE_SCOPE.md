@@ -37,4 +37,4 @@
 
 1. 至少一份真实项目接入样本
 2. 一轮 API 收敛
-3. 对 `AppConfig` 和 `RuntimeHost` 的兼容性重新审视
+3. 对 `AppSpec` 和 `RuntimeHost` 的兼容性重新审视

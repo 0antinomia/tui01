@@ -1,7 +1,8 @@
-use tui01::config::AppConfig;
+use tui01::builder::{page, screen, section, AppSpec};
 use tui01::event::EventHandler;
 use tui01::executor::ActionOutcome;
 use tui01::host::{HostLogLevel, RuntimeHost, ShellPolicy};
+use tui01::schema::FieldSpec;
 use tui01::tui;
 
 fn build_host() -> RuntimeHost {
@@ -53,23 +54,43 @@ async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     tui::init_panic_hook();
 
-    let path = std::env::args()
-        .nth(1)
-        .unwrap_or_else(|| "examples/host_app.yaml".to_string());
-
-    let config = AppConfig::from_file(&path)
-        .map_err(|err| color_eyre::eyre::eyre!("failed to load config from {}: {}", path, err))?;
-
     let host = build_host();
-
-    config
-        .validate_against_host(&host)
-        .map_err(|err| color_eyre::eyre::eyre!("host rejected config from {}: {}", path, err))?;
-
-    let spec = config.into_app_spec();
-    let mut app = spec
+    let mut app = AppSpec::new()
+        .title_text("Host Template\n\nRust-native host integration example.")
+        .status_controls(
+            "Controls:\n↑/↓ 或 j/k 当前焦点内移动\nShift+J/K 当前焦点区域翻页\nEnter / l 进入或确认\nEsc / h 返回\nq 退出",
+        )
+        .screen(screen(
+            "Workspace",
+            page("Workspace")
+                .section(
+                    section("基础配置")
+                        .field(
+                            FieldSpec::text_input("项目名", "demo", "输入项目名")
+                                .with_id("project_name"),
+                        )
+                        .field(
+                            FieldSpec::number_input("端口", "3000", "输入端口")
+                                .with_id("server_port"),
+                        ),
+                )
+                .section(
+                    section("操作")
+                        .field(
+                            FieldSpec::refresh_button("同步工作区", "同步")
+                                .with_id("sync_action")
+                                .with_registered_action("sync_workspace")
+                                .with_result_target("workspace_log"),
+                        )
+                        .field(
+                            FieldSpec::log_output("输出", "等待执行结果")
+                                .with_id("workspace_log")
+                                .with_height_units(4),
+                        ),
+                ),
+        ))
         .try_into_showcase_app_with_host(host)
-        .map_err(|err| color_eyre::eyre::eyre!("invalid app spec from {}: {}", path, err))?;
+        .map_err(|err| color_eyre::eyre::eyre!("invalid app spec: {}", err))?;
 
     if let Err(msg) = tui::check_minimum_size() {
         eprintln!("{}", msg);

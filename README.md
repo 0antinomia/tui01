@@ -162,89 +162,6 @@ app.validate_registered_actions()?;
 
 `ShowcaseApp` 上仍然保留了 `register_*` 方法，但它们只是兼容入口。
 
-## 外部配置格式
-
-现在已经有一个稳定的外部配置数据形状，位置在 [src/config.rs](/Users/bcsy/Desktop/myproject/tui01/src/config.rs)。
-
-当前支持：
-
-- `AppConfig::from_json_str(...)`
-- `AppConfig::from_yaml_str(...)`
-- `AppConfig::from_lua_str(...)`
-- `AppConfig::from_json_file(...)`
-- `AppConfig::from_yaml_file(...)`
-- `AppConfig::from_lua_file(...)`
-- `AppConfig::from_file(...)`
-
-YAML 示例：
-
-```yaml
-title_text: Demo
-status_controls: |
-  Controls:
-  ↑/↓ 或 j/k 移动
-  Enter / l 确认
-  Esc / h 返回
-  q 退出
-screens:
-  - title: Workspace
-    page:
-      title: Workspace
-      sections:
-        - title: Main
-          fields:
-            - label: 项目名
-              control:
-                type: text_input
-                value: tui01
-                placeholder: 输入项目名
-            - label: 启用缓存
-              control:
-                type: toggle
-                on: true
-        - title: Actions
-          fields:
-            - label: 刷新
-              control:
-                type: refresh_button
-                button_label: 刷新
-              operation:
-                kind: shell
-                command: printf 'workspace refreshed\n'
-                result_target: workspace_log
-            - label: 输出
-              id: workspace_log
-              height_units: 4
-              control:
-                type: log_output
-                content: 等待结果
-host_requirements:
-  required_context_keys:
-    - project_root
-  required_registered_actions: []
-  required_env_keys:
-    - APP_ENV
-  requires_working_dir: true
-```
-
-直接从文件运行示例：
-
-```bash
-cargo run --example from_config
-```
-
-指定配置文件：
-
-```bash
-cargo run --example from_config -- examples/demo.yaml
-```
-
-Lua 示例文件：
-
-```bash
-cargo run --example from_config -- examples/demo.lua
-```
-
 宿主集成模板：
 
 ```bash
@@ -254,7 +171,6 @@ cargo run --example host_template
 对应文件：
 
 - [examples/host_template.rs](/Users/bcsy/Desktop/myproject/tui01/examples/host_template.rs)
-- [examples/host_app.yaml](/Users/bcsy/Desktop/myproject/tui01/examples/host_app.yaml)
 
 推荐工程骨架：
 
@@ -262,13 +178,13 @@ cargo run --example host_template
 - [templates/host_project/main.rs](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/main.rs)
 - [templates/host_project/host.rs](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/host.rs)
 - [templates/host_project/actions.rs](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/actions.rs)
-- [templates/host_project/app.yaml](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/app.yaml)
+- [templates/host_project/app.rs](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/app.rs)
 
 建议的接入顺序是：
 
 1. Rust 原生：`AppSpec`
-2. YAML / JSON：`AppConfig`
-3. Lua：返回一个与 `AppConfig` 同形状的 table
+2. 宿主接入：`RuntimeHost`
+3. 工程骨架：复制 `templates/host_project`
 
 ## 配置校验
 
@@ -279,37 +195,13 @@ cargo run --example host_template
 - `result_target` 是否真的指向日志控件
 - `registered_action` 是否已经在宿主应用注册
 
-`examples/from_config.rs` 默认会在运行前执行这一步校验。
-
 如果你使用的是运行期注册的 Rust handler，而不是 `AppSpec::shell_action(...)`，则应在 host 或 app 装配完成后调用 `ShowcaseApp::validate_registered_actions()`。更推荐直接使用 `AppSpec::try_into_showcase_app_with_host(...)`。
-
-## 配置与宿主闭环
-
-`AppConfig` 现在支持声明最小宿主需求：
-
-- `required_context_keys`
-- `required_registered_actions`
-- `required_env_keys`
-- `requires_working_dir`
-
-加载顺序建议固定成：
-
-1. 读取 `AppConfig`
-2. 构建 `RuntimeHost`
-3. 调用 `AppConfig::validate_against_host(&host)`
-4. 再调用 `try_into_showcase_app_with_host(...)`
-
-这样配置层只能声明“它需要什么”，最终是否接受仍由宿主决定。
 
 ## 当前边界
 
 这个项目现在已经适合直接用 Rust 代码配置页面。
 
-Lua 现在已经有最小接入，但它只是配置层，不直接操作 UI 组件。更合理的顺序仍然是：
-
-1. 先稳定 Rust 侧 `AppSpec/PageSpec/FieldSpec`
-2. 再稳定 `AppConfig` 的 JSON/YAML 形状
-3. 再让 Lua 映射到 `AppConfig`
+当前项目明确以 Rust 原生配置为主路径，不再提供 YAML / JSON / Lua 配置入口。后续如果要重新引入外部配置方式，也必须建立在 Rust API 已稳定的前提上。
 
 ## 参数化动作
 

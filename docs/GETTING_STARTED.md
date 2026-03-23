@@ -25,7 +25,7 @@
    参考 [templates/host_project/README.md](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/README.md)
 
 3. 先注册动作，再写页面  
-   不要先把 YAML/Lua 写满，再回头补宿主动作
+   不要先把页面写满，再回头补宿主动作
 
 4. 默认收紧宿主策略  
    建议从 `ShellPolicy::RegisteredOnly` 开始
@@ -38,19 +38,16 @@ your-app/
 ├── src/
 │   ├── main.rs
 │   ├── host.rs
-│   └── actions.rs
-└── tui/
-    └── app.yaml
+│   ├── actions.rs
+│   └── app.rs
 ```
 
 ## 推荐启动顺序
 
-1. 加载 `AppConfig`
-2. 构建 `RuntimeHost`
-3. `validate_against_host(&host)`
-4. `into_app_spec()`
-5. `try_into_showcase_app_with_host(host)`
-6. 进入事件循环
+1. 构建 `RuntimeHost`
+2. 构建 `AppSpec`
+3. `try_into_showcase_app_with_host(host)`
+4. 进入事件循环
 
 ## 默认建议
 
@@ -70,4 +67,4 @@ your-app/
 - host policy 不允许未注册 shell
 - host working dir 在白名单内
 - host env key 在白名单内
-- 配置和宿主已经过 `validate_against_host(...)`
+- `AppSpec` 和宿主注册动作已经过 `validate()` / `try_into_showcase_app_with_host(...)` 校验
