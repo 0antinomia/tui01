@@ -7,10 +7,7 @@ use crate::components::{
     TitlePanel,
 };
 use crate::event::{Event, Key};
-use crate::executor::{
-    ActionContext, ActionOutcome, ActionRegistry, OperationExecutor, OperationRequest,
-    OperationResult,
-};
+use crate::executor::{ActionRegistry, OperationExecutor, OperationRequest, OperationResult};
 use crate::host::RuntimeHost;
 use crate::runtime::ContentBlueprint;
 use crate::schema::PageSpec;
@@ -40,9 +37,9 @@ pub struct ShowcaseApp {
 }
 
 enum SizeError {
-    TooSmall,
-    TooNarrow,
-    TooWide,
+    Small,
+    Narrow,
+    Wide,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -183,23 +180,6 @@ impl ShowcaseApp {
         self.content_panel.selected_block()
     }
 
-    pub fn register_shell_action(&mut self, name: impl Into<String>, command: impl Into<String>) {
-        let name = name.into();
-        let command = command.into();
-        self.host
-            .register_shell_action(name.clone(), command.clone());
-        self.refresh_executor();
-    }
-
-    pub fn register_action_handler<F, Fut>(&mut self, name: impl Into<String>, handler: F)
-    where
-        F: Fn(ActionContext) -> Fut + Send + Sync + 'static,
-        Fut: std::future::Future<Output = ActionOutcome> + Send + 'static,
-    {
-        self.host.register_action_handler(name.into(), handler);
-        self.refresh_executor();
-    }
-
     pub fn host(&self) -> &RuntimeHost {
         &self.host
     }
@@ -242,15 +222,6 @@ impl ShowcaseApp {
             FocusTarget::Menu => self.handle_menu_key(key),
             FocusTarget::Content => self.handle_content_key(key),
         }
-    }
-
-    fn refresh_executor(&mut self) {
-        self.executor = OperationExecutor::with_runtime(
-            self.host.action_registry(),
-            self.host.shell_policy(),
-            self.host.event_hook(),
-            self.host.logger(),
-        );
     }
 
     fn handle_menu_key(&mut self, key: Key) {
@@ -425,17 +396,17 @@ impl ShowcaseApp {
         use ratatui::layout::Alignment;
 
         let error_msg = match error {
-            SizeError::TooSmall => {
+            SizeError::Small => {
                 format!("终端太小（最小需要 {}x{}）", MIN_WIDTH, MIN_HEIGHT)
             }
-            SizeError::TooNarrow => {
+            SizeError::Narrow => {
                 format!(
                     "终端过窄（宽高比需 >= {:.1}，当前: {:.2}）",
                     MIN_ASPECT_RATIO,
                     Self::current_aspect_ratio()
                 )
             }
-            SizeError::TooWide => {
+            SizeError::Wide => {
                 format!(
                     "终端过宽（宽高比需 <= {:.1}，当前: {:.2}）",
                     MAX_ASPECT_RATIO,
@@ -576,14 +547,14 @@ impl ShowcaseApp {
 
     fn check_size(w: u16, h: u16) -> Option<SizeError> {
         if w < MIN_WIDTH || h < MIN_HEIGHT {
-            return Some(SizeError::TooSmall);
+            return Some(SizeError::Small);
         }
         let aspect_ratio = w as f64 / h as f64;
         if aspect_ratio < MIN_ASPECT_RATIO {
-            return Some(SizeError::TooNarrow);
+            return Some(SizeError::Narrow);
         }
         if aspect_ratio > MAX_ASPECT_RATIO {
-            return Some(SizeError::TooWide);
+            return Some(SizeError::Wide);
         }
         None
     }
@@ -599,8 +570,6 @@ mod tests {
     use super::{FocusTarget, ShowcaseApp, ShowcaseCopy, ShowcaseScreen};
     use crate::components::{ContentBlock, ContentBlueprint, ContentSection};
     use crate::event::{Event, Key};
-    use crate::executor::ActionOutcome;
-
     fn screen(title: &'static str, text: &'static str) -> ShowcaseScreen {
         ShowcaseScreen {
             title: title.to_string(),
@@ -807,78 +776,6 @@ mod tests {
         assert!(app.has_size_error());
         app.handle_event(Event::Resize(100, 40));
         assert!(!app.has_size_error());
-    }
-
-    #[test]
-    fn validate_registered_actions_passes_after_runtime_handler_registration() {
-        let mut app = ShowcaseApp::new(
-            ShowcaseCopy {
-                title_text: "Title".to_string(),
-                status_controls: "Controls".to_string(),
-            },
-            vec![ShowcaseScreen {
-                title: "One".to_string(),
-                content: ContentBlueprint::new("One").with_sections(vec![ContentSection::new(
-                    "Actions",
-                )
-                .with_blocks(vec![
-                    ContentBlock::action_button("Run", "Run").with_registered_action("run_sync")
-                ])]),
-            }],
-        );
-
-        assert!(app.validate_registered_actions().is_err());
-        app.register_action_handler("run_sync", |_| async { ActionOutcome::success("ok") });
-        assert!(app.validate_registered_actions().is_ok());
-    }
-
-    #[tokio::test]
-    async fn runtime_handler_results_flow_back_into_app() {
-        let mut app = ShowcaseApp::new(
-            ShowcaseCopy {
-                title_text: "Title".to_string(),
-                status_controls: "Controls".to_string(),
-            },
-            vec![ShowcaseScreen {
-                title: "One".to_string(),
-                content: ContentBlueprint::new("One").with_sections(vec![ContentSection::new(
-                    "Actions",
-                )
-                .with_blocks(vec![
-                    ContentBlock::text_input("项目名", "tui01", "输入").with_id("project_name"),
-                    ContentBlock::action_button("Run", "Run")
-                        .with_registered_action("run_sync")
-                        .with_result_target("run_log"),
-                    ContentBlock::log_output("输出", "等待").with_id("run_log"),
-                ])]),
-            }],
-        );
-        app.register_action_handler("run_sync", |context| async move {
-            ActionOutcome::success(format!(
-                "handler:{}",
-                context
-                    .params
-                    .get("project_name")
-                    .cloned()
-                    .unwrap_or_default()
-            ))
-        });
-
-        app.handle_event(Event::Key(Key::Char('l')));
-        app.handle_event(Event::Key(Key::Char('j')));
-        app.handle_event(Event::Key(Key::Enter));
-
-        for _ in 0..20 {
-            app.handle_event(Event::Tick);
-            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-        }
-
-        match &app.content_panel.blueprint().sections[0].blocks[2].control {
-            crate::components::ContentControl::LogOutput(log) => {
-                assert!(log.content.contains("handler:tui01"));
-            }
-            _ => panic!("expected log output"),
-        }
     }
 
     #[test]

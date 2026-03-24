@@ -320,9 +320,7 @@ impl ContentPanel {
         if self.block_is_running(block_index) {
             return None;
         }
-        let Some(block) = self.selected_block_ref() else {
-            return None;
-        };
+        let block = self.selected_block_ref()?;
 
         if block.operation.is_some() {
             if let Some(original) = snapshot {
@@ -357,9 +355,7 @@ impl ContentPanel {
         if self.block_is_running(block_index) {
             return None;
         }
-        let Some(block) = self.selected_block_ref() else {
-            return None;
-        };
+        let block = self.selected_block_ref()?;
 
         let mut pending = self.block_control(block_index)?.clone();
         let changed = handle_control_key(&mut pending, Key::Enter);
@@ -387,9 +383,7 @@ impl ContentPanel {
         if self.block_is_running(block_index) {
             return None;
         }
-        let Some(_block) = self.selected_block_ref() else {
-            return None;
-        };
+        let _block = self.selected_block_ref()?;
 
         let control = self.block_control(block_index)?.clone();
         self.start_operation(
@@ -758,10 +752,8 @@ impl ContentPanel {
         self.apply_operation_result_to_block(result.block_index, result);
 
         if let Some(target_id) = result.result_target.as_deref() {
-            if let Some(control) = self.block_control_mut_by_id(target_id) {
-                if let ContentControl::LogOutput(log) = control {
-                    log.append_entry(Self::format_result_output(result));
-                }
+            if let Some(ContentControl::LogOutput(log)) = self.block_control_mut_by_id(target_id) {
+                log.append_entry(Self::format_result_output(result));
             }
         }
     }
@@ -945,6 +937,7 @@ impl ContentPanel {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn render_content_block(
         &self,
         f: &mut Frame,
@@ -1072,6 +1065,7 @@ impl ContentPanel {
         out
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn write_text(
         &self,
         f: &mut Frame,

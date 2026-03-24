@@ -282,70 +282,9 @@ impl Default for AppSpec {
     }
 }
 
-/// Backward-compatible builder kept as a thin wrapper over [`AppSpec`].
-pub struct ShowcaseBuilder {
-    title_text: String,
-    status_controls: String,
-    screens: Vec<ShowcaseScreen>,
-    shell_actions: Vec<(String, String)>,
-}
-
-impl ShowcaseBuilder {
-    pub fn new() -> Self {
-        Self {
-            title_text: String::new(),
-            status_controls: String::new(),
-            screens: Vec::new(),
-            shell_actions: Vec::new(),
-        }
-    }
-
-    pub fn title_text(mut self, title_text: impl Into<String>) -> Self {
-        self.title_text = title_text.into();
-        self
-    }
-
-    pub fn status_controls(mut self, status_controls: impl Into<String>) -> Self {
-        self.status_controls = status_controls.into();
-        self
-    }
-
-    pub fn screen(mut self, screen: ShowcaseScreen) -> Self {
-        self.screens.push(screen);
-        self
-    }
-
-    pub fn shell_action(mut self, name: impl Into<String>, command: impl Into<String>) -> Self {
-        self.shell_actions.push((name.into(), command.into()));
-        self
-    }
-
-    pub fn build(self) -> ShowcaseApp {
-        AppSpec::new()
-            .title_text(self.title_text)
-            .status_controls(self.status_controls)
-            .screens(self.screens)
-            .shell_action_entries(self.shell_actions)
-            .into_showcase_app()
-    }
-}
-
-impl AppSpec {
-    fn shell_action_entries(mut self, shell_actions: Vec<(String, String)>) -> Self {
-        self.shell_actions.extend(shell_actions);
-        self
-    }
-}
-
-impl Default for ShowcaseBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{page, screen, section, AppSpec, AppValidationError, ShowcaseBuilder};
+    use super::{page, screen, section, AppSpec, AppValidationError};
     use crate::executor::{ActionOutcome, ActionRegistry};
     use crate::host::RuntimeHost;
     use crate::schema::FieldSpec;
@@ -364,12 +303,12 @@ mod tests {
     }
 
     #[test]
-    fn showcase_builder_collects_screens() {
-        let app = ShowcaseBuilder::new()
+    fn app_spec_collects_screens() {
+        let app = AppSpec::new()
             .title_text("Demo")
             .status_controls("Controls")
             .screen(screen("One", page("One")))
-            .build();
+            .into_showcase_app();
 
         assert_eq!(app.active_screen(), 0);
     }

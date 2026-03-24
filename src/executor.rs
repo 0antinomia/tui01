@@ -358,6 +358,12 @@ impl OperationExecutor {
     }
 }
 
+impl Default for OperationExecutor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn validate_request_permissions(
     cwd: Option<&str>,
     env: &HashMap<String, String>,

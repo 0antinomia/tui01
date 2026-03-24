@@ -160,8 +160,6 @@ app.validate_registered_actions()?;
 - 宿主日志钩子
 - 宿主事件钩子
 
-`ShowcaseApp` 上仍然保留了 `register_*` 方法，但它们只是兼容入口。
-
 宿主集成模板：
 
 ```bash
