@@ -538,6 +538,10 @@ impl ShowcaseApp {
 }
 
 fn framework_logger_for_host(host: &RuntimeHost) -> FrameworkLogger {
+    if !host.framework_log_enabled() {
+        return FrameworkLogger::disabled();
+    }
+
     if let Some(path) = host.framework_log_path() {
         FrameworkLogger::from_path(path).unwrap_or_else(|_| FrameworkLogger::fallback())
     } else if let Some(cwd) = host.working_dir() {

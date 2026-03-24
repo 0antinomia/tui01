@@ -120,6 +120,7 @@ pub struct RuntimeHost {
     shell: ShellRuntime,
     shell_policy: ShellPolicy,
     execution_policy: ExecutionPolicy,
+    framework_log_enabled: bool,
     framework_log_path: Option<PathBuf>,
     event_hook: Option<Arc<HostEventHook>>,
     logger: Option<Arc<HostLoggerHook>>,
@@ -137,6 +138,7 @@ impl RuntimeHost {
             shell: ShellRuntime::new(),
             shell_policy: ShellPolicy::AllowAll,
             execution_policy: ExecutionPolicy::new(),
+            framework_log_enabled: true,
             framework_log_path: None,
             event_hook: None,
             logger: None,
@@ -210,6 +212,15 @@ impl RuntimeHost {
     pub fn set_framework_log_path(mut self, path: impl Into<PathBuf>) -> Self {
         self.framework_log_path = Some(path.into());
         self
+    }
+
+    pub fn set_framework_log_enabled(mut self, enabled: bool) -> Self {
+        self.framework_log_enabled = enabled;
+        self
+    }
+
+    pub fn framework_log_enabled(&self) -> bool {
+        self.framework_log_enabled
     }
 
     pub fn framework_log_path(&self) -> Option<&Path> {
@@ -302,6 +313,7 @@ mod tests {
     fn runtime_host_stores_shell_runtime_settings() {
         let host = RuntimeHost::new()
             .set_working_dir("/tmp/demo")
+            .set_framework_log_enabled(false)
             .set_framework_log_path("/tmp/demo/.logs/framework.log")
             .insert_env("APP_ENV", "dev")
             .insert_env("APP_MODE", "test");
@@ -322,6 +334,7 @@ mod tests {
             host.framework_log_path().and_then(|path| path.to_str()),
             Some("/tmp/demo/.logs/framework.log")
         );
+        assert!(!host.framework_log_enabled());
     }
 
     #[test]

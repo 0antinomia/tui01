@@ -8,9 +8,12 @@ use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone)]
-pub struct FrameworkLogger {
-    path: PathBuf,
-    file: Arc<Mutex<File>>,
+pub enum FrameworkLogger {
+    Enabled {
+        path: PathBuf,
+        file: Arc<Mutex<File>>,
+    },
+    Disabled,
 }
 
 impl FrameworkLogger {
@@ -30,7 +33,7 @@ impl FrameworkLogger {
             .ok_or_else(|| std::io::Error::other("invalid framework log path"))?;
         fs::create_dir_all(parent)?;
         let file = OpenOptions::new().create(true).append(true).open(&path)?;
-        Ok(Self {
+        Ok(Self::Enabled {
             path,
             file: Arc::new(Mutex::new(file)),
         })
@@ -43,11 +46,21 @@ impl FrameworkLogger {
         })
     }
 
+    pub fn disabled() -> Self {
+        Self::Disabled
+    }
+
     pub fn path(&self) -> &Path {
-        &self.path
+        match self {
+            Self::Enabled { path, .. } => path.as_path(),
+            Self::Disabled => Path::new(""),
+        }
     }
 
     pub fn log(&self, record: &HostLogRecord) {
+        let Self::Enabled { file, .. } = self else {
+            return;
+        };
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default();
@@ -60,7 +73,7 @@ impl FrameworkLogger {
             record.message.replace('\n', " | ")
         );
 
-        if let Ok(mut file) = self.file.lock() {
+        if let Ok(mut file) = file.lock() {
             let _ = file.write_all(line.as_bytes());
             let _ = file.flush();
         }
@@ -81,6 +94,7 @@ mod tests {
     use super::FrameworkLogger;
     use crate::host::{HostLogLevel, HostLogRecord};
     use std::fs;
+    use std::path::Path;
     use std::path::PathBuf;
 
     #[test]
@@ -101,5 +115,17 @@ mod tests {
         assert!(content.contains("hello"));
 
         let _ = fs::remove_dir_all(base.join(".tui01"));
+    }
+
+    #[test]
+    fn disabled_framework_logger_writes_nothing() {
+        let logger = FrameworkLogger::disabled();
+        logger.log(&HostLogRecord {
+            level: HostLogLevel::Info,
+            target: "tui01.test".to_string(),
+            message: "ignored".to_string(),
+        });
+
+        assert_eq!(logger.path(), Path::new(""));
     }
 }

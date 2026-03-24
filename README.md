@@ -118,6 +118,7 @@ host.register_action_handler("sync_workspace", |context| async move {
 host = host
     .set_context("project_root", "/workspace/demo")
     .set_working_dir("/workspace/demo")
+    .set_framework_log_enabled(true)
     .set_framework_log_path("/workspace/demo/.tui01/logs/framework.log")
     .allow_working_dir("/workspace/demo")
     .insert_env("APP_ENV", "dev")
@@ -247,12 +248,20 @@ AppSpec::new()
 
 框架会默认把自身运行日志写到工作目录下的 `.tui01/logs/framework.log`。这些日志只关注框架本身的操作执行、策略拒绝和结果流转，不等同于页面里的日志控件。
 
-如果你要改路径，可以在宿主层显式设置：
+文件日志的开关和路径是分开的：
 
 ```rust
 let host = RuntimeHost::new()
+    .set_framework_log_enabled(true)
     .set_working_dir("/workspace/demo")
     .set_framework_log_path("/workspace/demo/var/tui/framework.log");
+```
+
+如果你不想生成框架文件日志，可以关闭它：
+
+```rust
+let host = RuntimeHost::new()
+    .set_framework_log_enabled(false);
 ```
 
 如果你希望页面里直接展示某个日志文件，可以使用：
