@@ -1,4 +1,4 @@
-//! Runtime page state definitions decoupled from UI rendering code.
+//! 与界面渲染解耦的运行时页面状态定义。
 
 use crate::components::{
     ActionButtonControl, DataDisplayControl, LogOutputControl, NumberInputControl, SelectControl,

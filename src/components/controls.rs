@@ -1,4 +1,4 @@
-//! Unified form controls for the right-bottom content panel.
+//! 右下内容面板使用的统一表单控件。
 
 use crate::event::Key;
 use ratatui::{

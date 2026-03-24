@@ -1,4 +1,4 @@
-//! Lightweight public builders for assembling showcase apps and pages.
+//! 面向宿主应用的轻量构建入口。
 
 use crate::schema::{PageSpec, SectionSpec};
 use crate::showcase::{ShowcaseApp, ShowcaseCopy, ShowcaseScreen};
@@ -9,25 +9,22 @@ use crate::{
 };
 use std::collections::{HashMap, HashSet};
 
-/// Start a page definition with a title.
+/// 使用标题开始定义一个页面。
 pub fn page(title: impl Into<String>) -> PageSpec {
     PageSpec::new(title)
 }
 
-/// Start a section definition with a title.
+/// 使用标题开始定义一个分区。
 pub fn section(title: impl Into<String>) -> SectionSpec {
     SectionSpec::new(title)
 }
 
-/// Wrap a page definition into a menu-visible screen.
+/// 将页面包装成左下菜单可见的页面项。
 pub fn screen(title: impl Into<String>, page: PageSpec) -> ShowcaseScreen {
     ShowcaseScreen::from_page(title, page)
 }
 
-/// Top-level application specification.
-///
-/// This is the preferred public entry point for assembling a runnable app:
-/// title copy, control help text, and the set of menu screens all live here.
+/// 顶层应用定义。
 pub struct AppSpec {
     title_text: String,
     status_controls: String,
@@ -84,7 +81,7 @@ impl std::fmt::Display for AppValidationError {
 impl std::error::Error for AppValidationError {}
 
 impl AppSpec {
-    /// Create an empty application definition.
+    /// 创建一个空的应用定义。
     pub fn new() -> Self {
         Self {
             title_text: String::new(),
@@ -94,31 +91,31 @@ impl AppSpec {
         }
     }
 
-    /// Set the left-top title panel text.
+    /// 设置左上标题区域文案。
     pub fn title_text(mut self, title_text: impl Into<String>) -> Self {
         self.title_text = title_text.into();
         self
     }
 
-    /// Set the right-top help/controls text.
+    /// 设置右上操作提示文案。
     pub fn status_controls(mut self, status_controls: impl Into<String>) -> Self {
         self.status_controls = status_controls.into();
         self
     }
 
-    /// Append a single screen.
+    /// 追加一个页面项。
     pub fn screen(mut self, screen: ShowcaseScreen) -> Self {
         self.screens.push(screen);
         self
     }
 
-    /// Append multiple screens.
+    /// 追加多个页面项。
     pub fn screens(mut self, screens: Vec<ShowcaseScreen>) -> Self {
         self.screens.extend(screens);
         self
     }
 
-    /// Register a named shell action that can be referenced by config.
+    /// 注册一个具名命令动作，供字段绑定引用。
     pub fn shell_action(mut self, name: impl Into<String>, command: impl Into<String>) -> Self {
         self.shell_actions.push((name.into(), command.into()));
         self
@@ -222,7 +219,7 @@ impl AppSpec {
         names
     }
 
-    /// Materialize the spec into a runnable showcase application.
+    /// 将应用定义实例化为可运行的应用。
     pub fn into_showcase_app(self) -> ShowcaseApp {
         self.into_showcase_app_with_registry(ActionRegistry::new())
     }

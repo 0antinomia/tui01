@@ -1,4 +1,4 @@
-//! Host-side runtime integration surface.
+//! 宿主侧运行时接入面。
 
 use crate::executor::{ActionContext, ActionOutcome, ActionRegistry};
 use std::collections::{HashMap, HashSet};

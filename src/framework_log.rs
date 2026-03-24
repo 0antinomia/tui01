@@ -1,4 +1,4 @@
-//! Internal framework runtime logger.
+//! 框架内部运行日志记录器。
 
 use crate::host::{HostLogLevel, HostLogRecord};
 use std::fs::{self, File, OpenOptions};

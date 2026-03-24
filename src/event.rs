@@ -1,4 +1,4 @@
-//! 基于 tokio 的异步事件处理
+//! 基于 tokio 的异步事件处理。
 
 use crossterm::event::{
     Event as CrosstermEvent, EventStream, KeyCode as CrosstermKeyCode, KeyEventKind, KeyModifiers,
@@ -7,7 +7,7 @@ use futures::{FutureExt, StreamExt};
 use tokio::sync::mpsc;
 use tokio::time::{self, Duration};
 
-/// 项目内部的按键类型，避免在上层直接依赖 crossterm。
+/// 项目内部的按键类型，避免在上层直接依赖 `crossterm`。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Key {
     Char(char),
@@ -40,23 +40,23 @@ impl From<CrosstermKeyCode> for Key {
 /// 内部事件类型
 #[derive(Debug, Clone, Copy)]
 pub enum Event {
-    /// 周期性刷新事件，用于动画和轮询状态
+    /// 周期性刷新事件，用于动画和轮询状态。
     Tick,
-    /// 键盘输入事件
+    /// 键盘输入事件。
     Key(Key),
-    /// 终端尺寸变化事件
+    /// 终端尺寸变化事件。
     Resize(u16, u16),
-    /// 退出信号（Ctrl+C）
+    /// 退出信号（`Ctrl+C`）。
     Quit,
 }
 
-/// 事件处理器，统一转发终端事件和退出信号
+/// 事件处理器，统一转发终端事件和退出信号。
 pub struct EventHandler {
     receiver: mpsc::UnboundedReceiver<Event>,
 }
 
 impl EventHandler {
-    /// 创建新的事件处理器
+    /// 创建新的事件处理器。
     pub fn new() -> Self {
         let (sender, receiver) = mpsc::unbounded_channel();
 
@@ -72,13 +72,13 @@ impl EventHandler {
                     _ = tick.tick() => {
                         let _ = sender.send(Event::Tick);
                     }
-                    // 处理终端事件
+                    // 处理终端事件。
                     maybe_event = reader.next().fuse() => {
                         if let Some(Ok(evt)) = maybe_event {
                             match evt {
                                 CrosstermEvent::Key(key) => {
                                     if key.kind == KeyEventKind::Press {
-                                        // 在 raw mode 下，Ctrl+C 作为键盘事件而不是 SIGINT
+                                        // 在原始输入模式下，`Ctrl+C` 会表现为键盘事件，而不是进程信号。
                                         if key.code == CrosstermKeyCode::Char('c')
                                             && key.modifiers.contains(KeyModifiers::CONTROL)
                                         {
@@ -95,7 +95,7 @@ impl EventHandler {
                             }
                         }
                     }
-                    // 处理 Ctrl+C 信号
+                    // 处理 `Ctrl+C` 信号。
                     _ = &mut ctrl_c => {
                         let _ = sender.send(Event::Quit);
                         break;
@@ -107,7 +107,7 @@ impl EventHandler {
         Self { receiver }
     }
 
-    /// 获取下一个事件（异步）
+    /// 异步获取下一个事件。
     pub async fn next(&mut self) -> Option<Event> {
         self.receiver.recv().await
     }

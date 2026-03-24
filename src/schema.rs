@@ -1,4 +1,4 @@
-//! Declarative page schema for building runtime page definitions.
+//! 用于构建运行时页面定义的声明式结构。
 
 use crate::runtime::{
     OperationSource, RuntimeControl, RuntimeField, RuntimeOperation, RuntimePage, RuntimeSection,
@@ -11,7 +11,7 @@ pub struct PageSpec {
 }
 
 impl PageSpec {
-    /// Create a page that will be shown as one screen in the left-bottom menu.
+    /// 创建一个页面，该页面会作为左下菜单中的一个页面项显示。
     pub fn new(title: impl Into<String>) -> Self {
         Self {
             title: title.into(),
@@ -19,19 +19,19 @@ impl PageSpec {
         }
     }
 
-    /// Replace all sections at once.
+    /// 一次性替换全部分区。
     pub fn with_sections(mut self, sections: Vec<SectionSpec>) -> Self {
         self.sections = sections;
         self
     }
 
-    /// Append one section.
+    /// 追加一个分区。
     pub fn section(mut self, section: SectionSpec) -> Self {
         self.sections.push(section);
         self
     }
 
-    /// Convert the declarative page into runtime data.
+    /// 将声明式页面转换为运行时数据。
     pub fn materialize(&self) -> RuntimePage {
         RuntimePage {
             title: self.title.clone(),
@@ -47,7 +47,7 @@ pub struct SectionSpec {
 }
 
 impl SectionSpec {
-    /// Create a section shown inside the right-bottom content area.
+    /// 创建一个显示在右下内容区中的分区。
     pub fn new(title: impl Into<String>) -> Self {
         Self {
             title: title.into(),
@@ -55,13 +55,13 @@ impl SectionSpec {
         }
     }
 
-    /// Replace all fields at once.
+    /// 一次性替换全部字段。
     pub fn with_fields(mut self, fields: Vec<FieldSpec>) -> Self {
         self.fields = fields;
         self
     }
 
-    /// Append one field.
+    /// 追加一个字段。
     pub fn field(mut self, field: FieldSpec) -> Self {
         self.fields.push(field);
         self
@@ -85,7 +85,7 @@ pub struct FieldSpec {
 }
 
 impl FieldSpec {
-    /// Text input field.
+    /// 文本输入字段。
     pub fn text_input(
         label: impl Into<String>,
         value: impl Into<String>,
@@ -103,7 +103,7 @@ impl FieldSpec {
         }
     }
 
-    /// Numeric input field. Only ASCII digits are accepted at edit time.
+    /// 数值输入字段。编辑时只接受半角数字。
     pub fn number_input(
         label: impl Into<String>,
         value: impl Into<String>,
@@ -121,7 +121,7 @@ impl FieldSpec {
         }
     }
 
-    /// Single-choice select field.
+    /// 单选下拉字段。
     pub fn select(
         label: impl Into<String>,
         options: impl IntoIterator<Item = impl Into<String>>,
@@ -139,7 +139,7 @@ impl FieldSpec {
         }
     }
 
-    /// Toggle field.
+    /// 开关字段。
     pub fn toggle(label: impl Into<String>, on: bool) -> Self {
         Self {
             id: None,
@@ -150,7 +150,7 @@ impl FieldSpec {
         }
     }
 
-    /// Action button field.
+    /// 动作按钮字段。
     pub fn action_button(label: impl Into<String>, button_label: impl Into<String>) -> Self {
         Self {
             id: None,
@@ -163,7 +163,7 @@ impl FieldSpec {
         }
     }
 
-    /// Refresh button field.
+    /// 刷新按钮字段。
     pub fn refresh_button(label: impl Into<String>, button_label: impl Into<String>) -> Self {
         Self {
             id: None,
@@ -176,7 +176,7 @@ impl FieldSpec {
         }
     }
 
-    /// Static read-only value display.
+    /// 静态只读值展示字段。
     pub fn static_data(label: impl Into<String>, value: impl Into<String>) -> Self {
         Self {
             id: None,
@@ -189,7 +189,7 @@ impl FieldSpec {
         }
     }
 
-    /// Dynamic read-only value display.
+    /// 动态只读值展示字段。
     pub fn dynamic_data(label: impl Into<String>, value: impl Into<String>) -> Self {
         Self {
             id: None,
@@ -202,7 +202,7 @@ impl FieldSpec {
         }
     }
 
-    /// Read-only log output field.
+    /// 只读日志输出字段。
     pub fn log_output(label: impl Into<String>, content: impl Into<String>) -> Self {
         Self {
             id: None,
@@ -217,7 +217,7 @@ impl FieldSpec {
         }
     }
 
-    /// Read-only log output field backed by a file on disk.
+    /// 由磁盘文件驱动的只读日志输出字段。
     pub fn log_output_from_file(
         label: impl Into<String>,
         path: impl Into<std::path::PathBuf>,
@@ -235,7 +235,7 @@ impl FieldSpec {
         }
     }
 
-    /// Limit log output to the most recent N lines.
+    /// 将日志输出限制为最近 N 行。
     pub fn with_log_tail_lines(mut self, tail_lines: usize) -> Self {
         if let ControlSpec::LogOutput {
             tail_lines: slot, ..
@@ -246,19 +246,19 @@ impl FieldSpec {
         self
     }
 
-    /// Assign a stable id for result routing or future external bindings.
+    /// 指定稳定 id，用于结果回写或未来外部绑定。
     pub fn with_id(mut self, id: impl Into<String>) -> Self {
         self.id = Some(id.into());
         self
     }
 
-    /// Set height in 3-row units.
+    /// 设置高度，单位为 3 行。
     pub fn with_height_units(mut self, height_units: u16) -> Self {
         self.height_units = height_units.max(1);
         self
     }
 
-    /// Bind a simulated successful operation.
+    /// 绑定一个模拟成功的操作。
     pub fn with_operation_success(mut self, duration_ms: u64) -> Self {
         let target = self
             .operation
@@ -269,7 +269,7 @@ impl FieldSpec {
         self
     }
 
-    /// Bind a simulated failed operation.
+    /// 绑定一个模拟失败的操作。
     pub fn with_operation_failure(mut self, duration_ms: u64) -> Self {
         let target = self
             .operation
@@ -280,7 +280,7 @@ impl FieldSpec {
         self
     }
 
-    /// Bind a real shell command.
+    /// 绑定一个真实命令行命令。
     pub fn with_shell_command(mut self, command: impl Into<String>) -> Self {
         let target = self
             .operation
@@ -290,7 +290,7 @@ impl FieldSpec {
         self
     }
 
-    /// Bind a registered action name resolved by the host application.
+    /// 绑定一个由宿主应用解析的已注册动作名。
     pub fn with_registered_action(mut self, action: impl Into<String>) -> Self {
         let target = self
             .operation
@@ -300,7 +300,7 @@ impl FieldSpec {
         self
     }
 
-    /// Route command output to a target log field by id.
+    /// 将命令输出路由到指定 id 的日志字段。
     pub fn with_result_target(mut self, target_id: impl Into<String>) -> Self {
         let target = target_id.into();
         let binding = self

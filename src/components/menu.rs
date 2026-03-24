@@ -1,7 +1,6 @@
-//! Menu component for navigable option list
+//! 左下菜单组件。
 //!
-//! Provides a static single-select menu with arrow/vim navigation
-//! and `>` prefix marker for selected item.
+//! 提供固定的单选菜单，支持方向键和 vim 风格导航。
 
 use crate::action::Action;
 use crate::components::Component;
@@ -13,15 +12,15 @@ use ratatui::{
     Frame,
 };
 
-/// A single menu item with label and optional component association ID
+/// 单个菜单项，只包含展示标签。
 #[derive(Debug, Clone)]
 pub struct MenuItem {
-    /// Display label for the menu item
+    /// 菜单显示标签。
     pub label: String,
 }
 
 impl MenuItem {
-    /// Create a new MenuItem with the given label
+    /// 使用给定标签创建菜单项。
     pub fn new(label: impl Into<String>) -> Self {
         Self {
             label: label.into(),
@@ -29,7 +28,7 @@ impl MenuItem {
     }
 }
 
-/// Menu state for managing selection and pagination
+/// 菜单状态，负责选择和分页。
 #[derive(Debug, Clone)]
 pub struct MenuState {
     items: Vec<MenuItem>,
@@ -39,39 +38,39 @@ pub struct MenuState {
 }
 
 impl MenuState {
-    /// Create a new MenuState with the given items
+    /// 使用给定菜单项创建状态。
     ///
-    /// First item is selected by default
+    /// 默认选中第一项。
     pub fn new(items: Vec<MenuItem>) -> Self {
         Self {
             items,
             selected: 0,
             current_page: 0,
-            items_per_page: 10, // Default, recalculated on render
+            items_per_page: 10, // 默认值，实际会在渲染时重算
         }
     }
 
-    /// Get the currently selected index
+    /// 获取当前选中项索引。
     pub fn selected_index(&self) -> usize {
         self.selected
     }
 
-    /// Get the currently selected item, if any
+    /// 获取当前选中项。
     pub fn selected_item(&self) -> Option<&MenuItem> {
         self.items.get(self.selected)
     }
 
-    /// Get the current page (0-indexed)
+    /// 获取当前页码，从 0 开始。
     pub fn current_page(&self) -> usize {
         self.current_page
     }
 
-    /// Get items per page
+    /// 获取每页项数。
     pub fn items_per_page(&self) -> usize {
         self.items_per_page
     }
 
-    /// Calculate total pages based on items_per_page
+    /// 根据每页项数计算总页数。
     pub fn total_pages(&self) -> usize {
         if self.items_per_page == 0 || self.items.is_empty() {
             return 1;
@@ -79,7 +78,7 @@ impl MenuState {
         (self.items.len().saturating_sub(1) / self.items_per_page) + 1
     }
 
-    /// Get labels for current page as strings
+    /// 获取当前页所有标签文本。
     pub fn current_page_labels(&self) -> Vec<String> {
         if self.items.is_empty() {
             return Vec::new();
@@ -92,7 +91,7 @@ impl MenuState {
             .collect()
     }
 
-    /// Go to previous page (per D-11)
+    /// 切到上一页。
     pub fn previous_page(&mut self) {
         if self.current_page > 0 {
             self.current_page -= 1;
@@ -100,7 +99,7 @@ impl MenuState {
         }
     }
 
-    /// Go to next page (per D-11)
+    /// 切到下一页。
     pub fn next_page(&mut self) {
         if self.current_page < self.total_pages().saturating_sub(1) {
             self.current_page += 1;
@@ -108,14 +107,14 @@ impl MenuState {
         }
     }
 
-    /// Update items per page based on available height (per D-10)
+    /// 根据可用高度更新每页项数。
     pub fn update_items_per_page(&mut self, available_height: usize) {
-        // Reserve 1 line for the pagination bar at the top and 1 blank spacer line below it.
-        // Each item uses 2 terminal rows to create breathing room.
+        // 顶部预留 1 行分页线，下方再留 1 行空白。
+        // 每个菜单项占 2 行，保证有足够留白。
         self.items_per_page = (available_height.saturating_sub(2) / 2).max(1);
     }
 
-    /// Ensure current page contains the selected item
+    /// 保证当前页覆盖选中项。
     fn update_page_for_selection(&mut self) {
         if self.items_per_page == 0 {
             return;
@@ -123,7 +122,7 @@ impl MenuState {
         self.current_page = self.selected / self.items_per_page;
     }
 
-    /// Clamp selection to be within current page
+    /// 将选中项限制在当前页范围内。
     fn clamp_selection_to_page(&mut self) {
         if self.items.is_empty() {
             return;
@@ -135,9 +134,9 @@ impl MenuState {
         }
     }
 
-    /// Select the previous item (up)
+    /// 选择上一项。
     ///
-    /// Does nothing if already at first item
+    /// 如果已经在第一项，则保持不变。
     pub fn select_previous(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
@@ -145,9 +144,9 @@ impl MenuState {
         }
     }
 
-    /// Select the next item (down)
+    /// 选择下一项。
     ///
-    /// Does nothing if already at last item
+    /// 如果已经在最后一项，则保持不变。
     pub fn select_next(&mut self) {
         if self.selected < self.items.len().saturating_sub(1) {
             self.selected += 1;
@@ -155,22 +154,21 @@ impl MenuState {
         }
     }
 
-    /// Get the number of items
+    /// 获取菜单项数量。
     #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.items.len()
     }
 
-    /// Check if menu is empty
+    /// 判断菜单是否为空。
     #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.items.is_empty()
     }
 
-    /// Generate a progress bar glyph sequence for pagination.
+    /// 生成分页线字符序列。
     ///
-    /// Current-page segments are brighter and thicker. Inactive segments stay visible
-    /// but are slightly dimmed so the active page reads more clearly.
+    /// 当前页使用更亮的线段，其余页保持可见但稍微压暗。
     pub fn pagination_bar(&self, width: usize) -> Vec<(char, Color)> {
         if width == 0 {
             return Vec::new();
@@ -193,16 +191,16 @@ impl MenuState {
     }
 }
 
-/// Menu component implementing the Component trait
+/// 菜单组件。
 ///
-/// Manages focus state and produces MenuSelect action when Enter pressed.
+/// 负责焦点状态管理，并在按下回车时产生 `MenuSelect` 动作。
 pub struct MenuComponent {
     state: MenuState,
     focused: bool,
 }
 
 impl MenuComponent {
-    /// Create a new MenuComponent with the given items
+    /// 使用给定菜单项创建菜单组件。
     pub fn new(items: Vec<MenuItem>) -> Self {
         Self {
             state: MenuState::new(items),
@@ -210,22 +208,22 @@ impl MenuComponent {
         }
     }
 
-    /// Get the current selection index
+    /// 获取当前选中索引。
     pub fn selected_index(&self) -> usize {
         self.state.selected_index()
     }
 
-    /// Get the currently selected item
+    /// 获取当前选中项。
     pub fn selected_item(&self) -> Option<&MenuItem> {
         self.state.selected_item()
     }
 
-    /// Get a reference to the menu state
+    /// 获取菜单状态的只读引用。
     pub fn state(&self) -> &MenuState {
         &self.state
     }
 
-    /// Get a mutable reference to the menu state
+    /// 获取菜单状态的可变引用。
     pub fn state_mut(&mut self) -> &mut MenuState {
         &mut self.state
     }
@@ -261,7 +259,7 @@ impl Component for MenuComponent {
     }
 
     fn handle_events(&mut self, event: Option<Event>) -> Action {
-        // Only respond to keys when focused
+        // 只有获得焦点时才响应按键。
         if !self.focused {
             return Action::Noop;
         }
@@ -295,7 +293,7 @@ impl Component for MenuComponent {
     }
 
     fn render(&mut self, f: &mut Frame, rect: Rect) {
-        // Update items per page based on available height (per D-10)
+        // 根据当前可用高度重算每页容量。
         self.state.update_items_per_page(rect.height as usize);
 
         let bar = self

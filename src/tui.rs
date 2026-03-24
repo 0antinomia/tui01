@@ -1,4 +1,4 @@
-//! 终端生命周期管理，支持 panic 安全清理
+//! 终端生命周期管理，支持发生异常时安全清理。
 
 use std::io::{self, Stdout};
 use std::panic;
@@ -18,13 +18,13 @@ pub const MIN_ASPECT_RATIO: f64 = 0.5;
 /// 最大宽高比（宽度/高度），防止终端过宽
 pub const MAX_ASPECT_RATIO: f64 = 4.0;
 
-/// Tui 结构体，封装 ratatui Terminal
+/// `Tui` 结构体，封装 `ratatui` 的终端实例。
 pub struct Tui {
     terminal: Terminal<CrosstermBackend<Stdout>>,
 }
 
 impl Tui {
-    /// 创建新的 Tui 实例，进入 raw 模式和备用屏幕
+    /// 创建新的 `Tui` 实例，进入原始输入模式和备用屏幕。
     pub fn new() -> color_eyre::Result<Self> {
         enable_raw_mode()?;
         let mut stdout = io::stdout();
@@ -51,12 +51,12 @@ impl Tui {
     }
 }
 
-/// 安装 panic hook，在 panic 时恢复终端状态
-/// 必须在任何可能 panic 的代码之前调用
+/// 安装异常钩子，在程序异常时恢复终端状态。
+/// 必须在任何可能触发异常的代码之前调用。
 pub fn init_panic_hook() {
     let original_hook = panic::take_hook();
     panic::set_hook(Box::new(move |panic_info| {
-        // 在打印 panic 信息前恢复终端状态
+        // 在打印异常信息前先恢复终端状态。
         let _ = disable_raw_mode();
         let _ = execute!(io::stdout(), LeaveAlternateScreen);
         original_hook(panic_info);

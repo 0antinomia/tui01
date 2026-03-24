@@ -1,4 +1,4 @@
-//! Recommended public imports for host applications.
+//! 推荐给宿主应用使用的公开导入集合。
 
 pub use crate::builder::{page, screen, section, AppSpec, AppValidationError};
 pub use crate::event::{Event, EventHandler, Key};

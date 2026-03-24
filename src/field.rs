@@ -1,4 +1,4 @@
-//! Concise field factories for the recommended public API.
+//! 推荐公开接入面使用的简洁字段工厂。
 
 use crate::schema::FieldSpec;
 use std::path::PathBuf;

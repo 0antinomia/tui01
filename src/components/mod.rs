@@ -1,4 +1,4 @@
-//! Component trait 及其实现
+//! `Component` trait 及其实现。
 
 mod content_panel;
 mod controls;
@@ -21,44 +21,44 @@ use crate::action::Action;
 use crate::event::Event;
 use ratatui::{layout::Rect, Frame};
 
-/// Component trait，用于有独立状态和渲染的 UI 区域
+/// `Component` trait，用于有独立状态和渲染逻辑的界面区域。
 ///
-/// 基于 The Elm Architecture (TEA) 模式
+/// 基于 The Elm Architecture（TEA）模式。
 pub trait Component {
-    /// 初始化组件
+    /// 初始化组件。
     fn init(&mut self) -> color_eyre::Result<()> {
         Ok(())
     }
 
-    /// 检查组件是否可以接受焦点
+    /// 检查组件是否可以接受焦点。
     fn can_focus(&self) -> bool {
         false
     }
 
-    /// 检查组件当前是否拥有焦点
+    /// 检查组件当前是否拥有焦点。
     fn is_focused(&self) -> bool {
         false
     }
 
-    /// 授予组件焦点
+    /// 授予组件焦点。
     fn focus(&mut self) {}
 
-    /// 移除组件焦点
+    /// 移除组件焦点。
     fn blur(&mut self) {}
 
-    /// 处理事件并返回 Action
+    /// 处理事件并返回动作。
     fn handle_events(&mut self, _event: Option<Event>) -> Action {
         Action::Noop
     }
 
-    /// 根据 Action 更新组件状态，可选地返回新的 Action
+    /// 根据动作更新组件状态，并可选返回新的动作。
     ///
-    /// 返回 `None` 表示没有后续动作
-    /// 返回 `Some(action)` 表示需要触发链式 Action
+    /// 返回 `None` 表示没有后续动作。
+    /// 返回 `Some(action)` 表示需要触发链式动作。
     fn update(&mut self, _action: Action) -> Option<Action> {
         None
     }
 
-    /// 渲染组件到 frame
+    /// 将组件渲染到当前帧。
     fn render(&mut self, f: &mut Frame, rect: Rect);
 }
