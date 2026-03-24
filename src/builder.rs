@@ -3,8 +3,9 @@
 use crate::schema::{PageSpec, SectionSpec};
 use crate::showcase::{ShowcaseApp, ShowcaseCopy, ShowcaseScreen};
 use crate::{
-    components::ContentControl, executor::ActionRegistry, host::RuntimeHost,
-    runtime::OperationSource,
+    executor::ActionRegistry,
+    host::RuntimeHost,
+    runtime::{ContentControl, OperationSource},
 };
 use std::collections::{HashMap, HashSet};
 

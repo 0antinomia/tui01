@@ -24,10 +24,17 @@
 2. 配置层和宿主层边界稳定
 3. 动作执行链可预测
 
+这里的“宿主接入路径”特指：
+
+- `prelude`
+- `field`
+- `RuntimeHost`
+
 暂时不优先保证：
 
 - 宽范围 UI 组件 API 完全稳定
 - 所有内部模块路径长期不变
+- `builder / schema / runtime / components / showcase` 的细节长期不变
 
 ## 对外建议
 

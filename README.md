@@ -7,13 +7,23 @@
 当前结构分成四层：
 
 - `builder`：面向使用的顶层入口
+- `field`：字段快捷工厂
 - `schema`：声明式页面/字段定义
 - `runtime`：运行时模型与状态
 - `components`：纯 UI 渲染与交互
 
 ## 当前推荐入口
 
-优先使用 [src/builder.rs](/Users/bcsy/Desktop/myproject/tui01/src/builder.rs) 提供的 `AppSpec`、`page(...)`、`section(...)`、`screen(...)`。
+优先使用 [src/prelude.rs](/Users/bcsy/Desktop/myproject/tui01/src/prelude.rs) 和 [src/field.rs](/Users/bcsy/Desktop/myproject/tui01/src/field.rs)。
+
+推荐宿主应用只直接认识这些入口：
+
+- `prelude::AppSpec`
+- `prelude::page / screen / section`
+- `field::*`
+- `prelude::RuntimeHost`
+
+这也是当前唯一推荐的宿主接入面。其余模块虽然仍然公开，但都视为内部实现层或过渡层，不作为稳定 API 承诺。
 
 配套文档：
 
@@ -25,8 +35,8 @@
 最小示例：
 
 ```rust
-use tui01::builder::{page, screen, section, AppSpec};
-use tui01::schema::FieldSpec;
+use tui01::field;
+use tui01::prelude::{page, screen, section, AppSpec};
 
 let app = AppSpec::new()
     .title_text("My TUI\n\n最小示例")
@@ -38,21 +48,23 @@ let app = AppSpec::new()
         page("Workspace")
             .section(
                 section("基础配置")
-                    .field(FieldSpec::text_input("项目名", "demo", "输入项目名"))
-                    .field(FieldSpec::number_input("端口", "3000", "输入端口"))
-                    .field(FieldSpec::toggle("启用缓存", true)),
+                    .field(field::text("项目名", "demo", "输入项目名"))
+                    .field(field::number("端口", "3000", "输入端口"))
+                    .field(field::toggle("启用缓存", true)),
             )
             .section(
                 section("操作")
                     .field(
-                        FieldSpec::refresh_button("刷新工作区", "刷新")
-                            .with_id("refresh_workspace")
-                            .with_result_target("workspace_log")
-                            .with_shell_command("printf 'workspace refreshed\\n'"),
+                        field::refresh_to_log(
+                            "刷新工作区",
+                            "刷新",
+                            "refresh_workspace",
+                            "workspace_log",
+                        )
+                        .with_shell_command("printf 'workspace refreshed\\n'"),
                     )
                     .field(
-                        FieldSpec::log_output("输出", "等待执行结果")
-                            .with_id("workspace_log")
+                        field::log_id("输出", "等待执行结果", "workspace_log")
                             .with_height_units(4),
                     ),
             ),
@@ -76,16 +88,16 @@ cargo run
 
 当前已经支持：
 
-- 文本输入：`FieldSpec::text_input(...)`
-- 数值输入：`FieldSpec::number_input(...)`
-- 下拉选择：`FieldSpec::select(...)`
-- 开关：`FieldSpec::toggle(...)`
-- 动作按钮：`FieldSpec::action_button(...)`
-- 刷新按钮：`FieldSpec::refresh_button(...)`
-- 静态展示：`FieldSpec::static_data(...)`
-- 动态展示：`FieldSpec::dynamic_data(...)`
-- 日志输出：`FieldSpec::log_output(...)`
-- 文件日志输出：`FieldSpec::log_output_from_file(...)`
+- 文本输入：`field::text(...)`
+- 数值输入：`field::number(...)`
+- 下拉选择：`field::select(...)`
+- 开关：`field::toggle(...)`
+- 动作按钮：`field::action(...)`
+- 刷新按钮：`field::refresh(...)`
+- 静态展示：`field::static_value(...)`
+- 动态展示：`field::dynamic_value(...)`
+- 日志输出：`field::log(...)`
+- 文件日志输出：`field::log_file(...)`
 
 ## 操作绑定
 
@@ -98,9 +110,7 @@ cargo run
 命令输出可以写入某个日志字段：
 
 ```rust
-FieldSpec::action_button("同步", "执行")
-    .with_id("sync_action")
-    .with_result_target("sync_log")
+field::action_to_log("同步", "执行", "sync_action", "sync_log")
     .with_shell_command("printf 'sync ok\\n'")
 ```
 
@@ -108,7 +118,8 @@ FieldSpec::action_button("同步", "执行")
 
 ```rust
 use tui01::executor::ActionOutcome;
-use tui01::host::{HostEvent, HostLogLevel, RuntimeHost, ShellPolicy};
+use tui01::field;
+use tui01::prelude::{AppSpec, HostEvent, HostLogLevel, RuntimeHost, ShellPolicy, page, screen, section};
 
 let mut host = RuntimeHost::new();
 host.register_action_handler("sync_workspace", |context| async move {
@@ -142,7 +153,7 @@ let mut app = AppSpec::new()
         "Workspace",
         page("Workspace").section(
             section("操作").field(
-                FieldSpec::action_button("同步", "执行")
+                field::action("同步", "执行")
                     .with_registered_action("sync_workspace"),
             ),
         ),
@@ -183,9 +194,12 @@ cargo run --example host_template
 
 建议的接入顺序是：
 
-1. Rust 原生：`AppSpec`
-2. 宿主接入：`RuntimeHost`
+1. `prelude`
+2. `field`
+3. `RuntimeHost`
 3. 工程骨架：复制 `templates/host_project`
+
+`builder / schema / showcase / runtime / components` 这些模块仍然存在，但不再作为推荐接入面。后续如果继续收口，对外优先保证 `prelude + field + RuntimeHost`，而不会优先保证这些内部层的路径和细节长期不变。
 
 ## 配置校验
 
@@ -215,8 +229,8 @@ cargo run --example host_template
 例如：
 
 ```rust
-FieldSpec::text_input("项目名", "tui01", "输入项目名").with_id("project_name");
-FieldSpec::number_input("端口", "3000", "输入端口").with_id("server_port");
+field::text_id("项目名", "tui01", "输入项目名", "project_name");
+field::number_id("端口", "3000", "输入端口", "server_port");
 
 AppSpec::new()
     .shell_action(
@@ -267,8 +281,7 @@ let host = RuntimeHost::new()
 如果你希望页面里直接展示某个日志文件，可以使用：
 
 ```rust
-FieldSpec::log_output_from_file("框架日志", ".tui01/logs/framework.log")
-    .with_log_tail_lines(20)
+field::log_file_tail("框架日志", ".tui01/logs/framework.log", 20)
     .with_height_units(4)
 ```
 

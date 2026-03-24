@@ -1,8 +1,7 @@
-use tui01::builder::{page, screen, section, AppSpec};
 use tui01::event::EventHandler;
 use tui01::executor::ActionOutcome;
-use tui01::host::{HostLogLevel, RuntimeHost, ShellPolicy};
-use tui01::schema::FieldSpec;
+use tui01::field;
+use tui01::prelude::{page, screen, section, AppSpec, HostLogLevel, RuntimeHost, ShellPolicy};
 use tui01::tui;
 
 fn build_host() -> RuntimeHost {
@@ -66,25 +65,25 @@ async fn main() -> color_eyre::Result<()> {
                 .section(
                     section("基础配置")
                         .field(
-                            FieldSpec::text_input("项目名", "demo", "输入项目名")
-                                .with_id("project_name"),
+                            field::text_id("项目名", "demo", "输入项目名", "project_name"),
                         )
                         .field(
-                            FieldSpec::number_input("端口", "3000", "输入端口")
-                                .with_id("server_port"),
+                            field::number_id("端口", "3000", "输入端口", "server_port"),
                         ),
                 )
                 .section(
                     section("操作")
                         .field(
-                            FieldSpec::refresh_button("同步工作区", "同步")
-                                .with_id("sync_action")
-                                .with_registered_action("sync_workspace")
-                                .with_result_target("workspace_log"),
+                            field::refresh_registered_to_log(
+                                "同步工作区",
+                                "同步",
+                                "sync_action",
+                                "sync_workspace",
+                                "workspace_log",
+                            ),
                         )
                         .field(
-                            FieldSpec::log_output("输出", "等待执行结果")
-                                .with_id("workspace_log")
+                            field::log_id("输出", "等待执行结果", "workspace_log")
                                 .with_height_units(4),
                         ),
                 ),

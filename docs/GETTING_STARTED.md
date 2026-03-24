@@ -30,6 +30,9 @@
 4. 默认收紧宿主策略  
    建议从 `ShellPolicy::RegisteredOnly` 开始
 
+5. 只用推荐入口  
+   宿主代码优先使用 `tui01::prelude` 和 `tui01::field`
+
 ## 推荐目录
 
 ```text
@@ -45,7 +48,7 @@ your-app/
 ## 推荐启动顺序
 
 1. 构建 `RuntimeHost`
-2. 构建 `AppSpec`
+2. 通过 `prelude + field` 构建 `AppSpec`
 3. `try_into_showcase_app_with_host(host)`
 4. 进入事件循环
 

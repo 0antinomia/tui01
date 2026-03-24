@@ -518,10 +518,10 @@ impl From<RuntimeField> for ContentBlock {
 #[cfg(test)]
 mod tests {
     use super::{
-        ContentRuntimeState, OperationSource, OperationStatus, RuntimeControl, RuntimeField,
-        RuntimeOperation, RuntimePage, RuntimeSection,
+        ContentBlock, ContentBlueprint, ContentControl, ContentRuntimeState, ContentSection,
+        OperationSource, OperationStatus, RuntimeControl, RuntimeField, RuntimeOperation,
+        RuntimePage, RuntimeSection,
     };
-    use crate::components::{ContentBlueprint, ContentControl, ContentSection};
 
     #[test]
     fn runtime_page_converts_to_content_blueprint() {
@@ -545,7 +545,7 @@ mod tests {
             }],
         };
 
-        let blueprint: crate::components::ContentBlueprint = runtime.into();
+        let blueprint: ContentBlueprint = runtime.into();
         assert_eq!(blueprint.sections.len(), 1);
         assert_eq!(
             blueprint.sections[0].blocks[0].id.as_deref(),
@@ -562,8 +562,8 @@ mod tests {
     fn content_runtime_state_tracks_block_count() {
         let blueprint = ContentBlueprint::new("Root").with_sections(vec![ContentSection::new("A")
             .with_blocks(vec![
-                crate::components::ContentBlock::toggle("one", true),
-                crate::components::ContentBlock::toggle("two", false),
+                ContentBlock::toggle("one", true),
+                ContentBlock::toggle("two", false),
             ])]);
 
         let state = ContentRuntimeState::from_blueprint(&blueprint);
