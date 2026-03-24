@@ -2,7 +2,9 @@
 
 `tui01` 是一个基于 `ratatui` 的四分区 TUI 框架，当前版本为 `0.1.0`。
 
-它现在最适合用来做这类程序：
+tui01 让你能更快地从 0 到 1 搭起一个可运行、可交互、可接入宿主逻辑的 TUI 工具。
+
+它适合用来做这类程序：
 
 - 内部工具面板
 - 配置驱动的运维/开发 TUI
@@ -23,8 +25,6 @@ cargo run --example host_template
 ```bash
 cargo run
 ```
-
-但它主要用于框架仓库自身的 smoke test 和界面观察，不作为推荐宿主样板。
 
 ## 最短接入路径
 
@@ -192,7 +192,7 @@ field::action_to_log("同步", "执行", "sync_action", "sync_log")
 
 默认会做 shell 安全转义。只有明确需要原始片段时才使用 `{{raw:field_id}}`。
 
-## 校验与边界
+## 校验
 
 框架在 `AppSpec` 层会统一检查：
 
@@ -200,8 +200,6 @@ field::action_to_log("同步", "执行", "sync_action", "sync_log")
 - `result_target` 是否存在
 - `result_target` 是否真的指向日志控件
 - `registered_action` 是否已经在宿主应用注册
-
-当前项目明确以 Rust 原生配置为主路径，不提供 YAML / JSON / Lua 配置入口。
 
 ## 进一步阅读
 
