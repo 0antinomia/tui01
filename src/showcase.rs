@@ -8,6 +8,7 @@ use crate::components::{
 };
 use crate::event::{Event, Key};
 use crate::executor::{ActionRegistry, OperationExecutor, OperationRequest, OperationResult};
+use crate::framework_log::FrameworkLogger;
 use crate::host::RuntimeHost;
 use crate::runtime::ContentBlueprint;
 use crate::schema::PageSpec;
@@ -118,6 +119,7 @@ impl ShowcaseApp {
                 host.shell_policy(),
                 host.event_hook(),
                 host.logger(),
+                framework_logger_for_host(&host),
             ),
             host,
             next_operation_id: 1,
@@ -475,8 +477,6 @@ impl ShowcaseApp {
     }
 
     fn submit_operation(&mut self, request: OperationRequest) {
-        self.status_panel
-            .set_running_result(format!("正在执行\n{}", request.source.describe()));
         self.executor.submit(OperationRequest {
             host: self.host.context().clone(),
             cwd: self
@@ -508,34 +508,6 @@ impl ShowcaseApp {
         if result.screen_index == self.active_screen {
             self.content_panel.apply_operation_result(&result);
         }
-
-        let summary = Self::summarize_operation_output(&result);
-        if result.success {
-            self.status_panel.set_success_result(summary);
-        } else {
-            self.status_panel.set_failure_result(summary);
-        }
-    }
-
-    fn summarize_operation_output(result: &OperationResult) -> String {
-        let primary = if result.success {
-            result.stdout.as_str()
-        } else {
-            result.stderr.as_str()
-        };
-
-        let fallback = if result.success {
-            "操作成功"
-        } else {
-            "操作失败"
-        };
-
-        primary
-            .lines()
-            .map(str::trim)
-            .find(|line| !line.is_empty())
-            .unwrap_or(fallback)
-            .to_string()
     }
 
     fn current_content_rect(&self) -> Rect {
@@ -562,6 +534,16 @@ impl ShowcaseApp {
     fn current_aspect_ratio() -> f64 {
         let (w, h) = tui::terminal_size().unwrap_or((MIN_WIDTH, MIN_HEIGHT));
         w as f64 / h as f64
+    }
+}
+
+fn framework_logger_for_host(host: &RuntimeHost) -> FrameworkLogger {
+    if let Some(path) = host.framework_log_path() {
+        FrameworkLogger::from_path(path).unwrap_or_else(|_| FrameworkLogger::fallback())
+    } else if let Some(cwd) = host.working_dir() {
+        FrameworkLogger::new(cwd).unwrap_or_else(|_| FrameworkLogger::fallback())
+    } else {
+        FrameworkLogger::fallback()
     }
 }
 

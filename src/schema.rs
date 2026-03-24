@@ -209,10 +209,41 @@ impl FieldSpec {
             label: label.into(),
             control: ControlSpec::LogOutput {
                 content: content.into(),
+                file_source: None,
+                tail_lines: None,
             },
             height_units: 4,
             operation: None,
         }
+    }
+
+    /// Read-only log output field backed by a file on disk.
+    pub fn log_output_from_file(
+        label: impl Into<String>,
+        path: impl Into<std::path::PathBuf>,
+    ) -> Self {
+        Self {
+            id: None,
+            label: label.into(),
+            control: ControlSpec::LogOutput {
+                content: String::new(),
+                file_source: Some(path.into()),
+                tail_lines: None,
+            },
+            height_units: 4,
+            operation: None,
+        }
+    }
+
+    /// Limit log output to the most recent N lines.
+    pub fn with_log_tail_lines(mut self, tail_lines: usize) -> Self {
+        if let ControlSpec::LogOutput {
+            tail_lines: slot, ..
+        } = &mut self.control
+        {
+            *slot = Some(tail_lines.max(1));
+        }
+        self
     }
 
     /// Assign a stable id for result routing or future external bindings.
@@ -309,8 +340,14 @@ impl FieldSpec {
                 ControlSpec::DynamicData { value } => RuntimeControl::DynamicData {
                     value: value.clone(),
                 },
-                ControlSpec::LogOutput { content } => RuntimeControl::LogOutput {
+                ControlSpec::LogOutput {
+                    content,
+                    file_source,
+                    tail_lines,
+                } => RuntimeControl::LogOutput {
                     content: content.clone(),
+                    file_source: file_source.clone(),
+                    tail_lines: *tail_lines,
                 },
             },
             height_units: self.height_units,
@@ -353,6 +390,8 @@ enum ControlSpec {
     },
     LogOutput {
         content: String,
+        file_source: Option<std::path::PathBuf>,
+        tail_lines: Option<usize>,
     },
 }
 

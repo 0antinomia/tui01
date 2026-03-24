@@ -158,6 +158,26 @@ impl ContentBlock {
         }
     }
 
+    pub fn log_output_from_file(
+        label: impl Into<String>,
+        path: impl Into<std::path::PathBuf>,
+    ) -> Self {
+        Self {
+            id: None,
+            label: label.into(),
+            control: ContentControl::LogOutput(LogOutputControl::from_file(path)),
+            height_units: 4,
+            operation: None,
+        }
+    }
+
+    pub fn with_log_tail_lines(mut self, tail_lines: usize) -> Self {
+        if let ContentControl::LogOutput(control) = &mut self.control {
+            control.set_tail_lines(tail_lines);
+        }
+        self
+    }
+
     pub fn with_id(mut self, id: impl Into<String>) -> Self {
         self.id = Some(id.into());
         self
@@ -324,6 +344,8 @@ pub enum RuntimeControl {
     },
     LogOutput {
         content: String,
+        file_source: Option<std::path::PathBuf>,
+        tail_lines: Option<usize>,
     },
 }
 
@@ -453,7 +475,25 @@ impl From<RuntimeField> for ContentBlock {
             RuntimeControl::DynamicData { value: field_value } => {
                 ContentBlock::dynamic_data(value.label, field_value)
             }
-            RuntimeControl::LogOutput { content } => ContentBlock::log_output(value.label, content),
+            RuntimeControl::LogOutput {
+                content,
+                file_source,
+                tail_lines,
+            } => {
+                let mut block = ContentBlock::log_output(value.label, content);
+                if let Some(path) = file_source {
+                    block.control = ContentControl::LogOutput(LogOutputControl::from_file(path));
+                }
+                if let ContentControl::LogOutput(control) = &mut block.control {
+                    if let Some(limit) = tail_lines {
+                        control.set_tail_lines(limit);
+                        if control.file_source().is_some() {
+                            control.refresh_from_file();
+                        }
+                    }
+                }
+                block
+            }
         };
 
         if let Some(id) = value.id {

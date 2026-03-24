@@ -85,6 +85,7 @@ cargo run
 - 静态展示：`FieldSpec::static_data(...)`
 - 动态展示：`FieldSpec::dynamic_data(...)`
 - 日志输出：`FieldSpec::log_output(...)`
+- 文件日志输出：`FieldSpec::log_output_from_file(...)`
 
 ## 操作绑定
 
@@ -117,6 +118,7 @@ host.register_action_handler("sync_workspace", |context| async move {
 host = host
     .set_context("project_root", "/workspace/demo")
     .set_working_dir("/workspace/demo")
+    .set_framework_log_path("/workspace/demo/.tui01/logs/framework.log")
     .allow_working_dir("/workspace/demo")
     .insert_env("APP_ENV", "dev")
     .allow_env_key("APP_ENV")
@@ -243,4 +245,25 @@ AppSpec::new()
 
 这样即使动作本身被允许执行，底层 shell 也只能在你明确批准的目录和环境变量范围内运行。
 
-如果你的应用已经有自己的日志系统，优先接 `RuntimeHost::on_log(...)`。它比事件钩子更适合直接落日志；事件钩子更适合做监控、通知或额外联动。
+框架会默认把自身运行日志写到工作目录下的 `.tui01/logs/framework.log`。这些日志只关注框架本身的操作执行、策略拒绝和结果流转，不等同于页面里的日志控件。
+
+如果你要改路径，可以在宿主层显式设置：
+
+```rust
+let host = RuntimeHost::new()
+    .set_working_dir("/workspace/demo")
+    .set_framework_log_path("/workspace/demo/var/tui/framework.log");
+```
+
+如果你希望页面里直接展示某个日志文件，可以使用：
+
+```rust
+FieldSpec::log_output_from_file("框架日志", ".tui01/logs/framework.log")
+    .with_log_tail_lines(20)
+    .with_height_units(4)
+```
+
+文件日志控件会在 tick 周期里自动刷新内容，也保留原来的滚动查看能力。
+如果设置了 `with_log_tail_lines(...)`，控件会只保留文件尾部最近 N 行，并对常见 `DEBUG / INFO / WARN / ERROR` 级别做颜色高亮。
+
+如果你的应用已经有自己的日志系统，可以额外接 `RuntimeHost::on_log(...)` 把同一批框架日志镜像到宿主日志里；事件钩子更适合做监控、通知或额外联动。

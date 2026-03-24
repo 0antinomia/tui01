@@ -161,6 +161,7 @@ impl ContentPanel {
 
         if content_changed {
             self.runtime = ContentRuntimeState::from_blueprint(&self.blueprint);
+            self.refresh_file_logs();
             self.control_active = false;
         }
     }
@@ -216,6 +217,17 @@ impl ContentPanel {
 
     pub fn tick(&mut self) {
         self.runtime.spinner_tick = self.runtime.spinner_tick.wrapping_add(1);
+        self.refresh_file_logs();
+    }
+
+    fn refresh_file_logs(&mut self) {
+        for state in &mut self.runtime.field_states {
+            if let ContentControl::LogOutput(control) = &mut state.control {
+                if control.file_source().is_some() {
+                    control.refresh_from_file();
+                }
+            }
+        }
     }
 
     fn clear_all_statuses(&mut self) {

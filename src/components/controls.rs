@@ -7,6 +7,8 @@ use ratatui::{
     style::{Color, Style},
     widgets::{Block, BorderType, Borders, Paragraph, Widget},
 };
+use std::fs;
+use std::path::{Path, PathBuf};
 use unicode_width::UnicodeWidthChar;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -472,6 +474,8 @@ impl DataDisplayControl {
 pub struct LogOutputControl {
     pub content: String,
     pub scroll_offset: usize,
+    pub file_source: Option<PathBuf>,
+    pub tail_lines: Option<usize>,
 }
 
 impl LogOutputControl {
@@ -483,7 +487,33 @@ impl LogOutputControl {
         Self {
             content: content.into(),
             scroll_offset: 0,
+            file_source: None,
+            tail_lines: None,
         }
+    }
+
+    pub fn from_file(path: impl Into<PathBuf>) -> Self {
+        let mut control = Self {
+            content: String::new(),
+            scroll_offset: 0,
+            file_source: Some(path.into()),
+            tail_lines: None,
+        };
+        control.refresh_from_file();
+        control
+    }
+
+    pub fn set_file_source(&mut self, path: impl Into<PathBuf>) {
+        self.file_source = Some(path.into());
+        self.refresh_from_file();
+    }
+
+    pub fn file_source(&self) -> Option<&Path> {
+        self.file_source.as_deref()
+    }
+
+    pub fn set_tail_lines(&mut self, tail_lines: usize) {
+        self.tail_lines = Some(tail_lines.max(1));
     }
 
     pub fn append_entry(&mut self, entry: impl AsRef<str>) {
@@ -506,7 +536,7 @@ impl LogOutputControl {
             lines.drain(0..drain);
         }
 
-        self.content = lines.join("\n");
+        self.content = apply_tail_limit(lines, self.tail_lines).join("\n");
         self.scroll_to_bottom();
     }
 
@@ -535,6 +565,24 @@ impl LogOutputControl {
 
     pub fn scroll_to_bottom(&mut self) {
         self.scroll_offset = self.max_scroll_offset();
+    }
+
+    pub fn refresh_from_file(&mut self) {
+        let Some(path) = &self.file_source else {
+            return;
+        };
+
+        match fs::read_to_string(path) {
+            Ok(content) => {
+                let lines = content.lines().map(ToString::to_string).collect::<Vec<_>>();
+                self.content = apply_tail_limit(lines, self.tail_lines).join("\n");
+                self.scroll_to_bottom();
+            }
+            Err(err) => {
+                self.content = format!("failed to read log file\n{}\n{}", path.display(), err);
+                self.scroll_to_bottom();
+            }
+        }
     }
 
     fn max_scroll_offset(&self) -> usize {
@@ -576,13 +624,39 @@ impl LogOutputControl {
             buf.set_stringn(
                 inner.x,
                 y,
-                line,
+                line.as_str(),
                 inner.width as usize,
-                Style::default().fg(Color::White),
+                log_line_style(&line),
             );
             y += 1;
         }
     }
+}
+
+fn apply_tail_limit(mut lines: Vec<String>, tail_lines: Option<usize>) -> Vec<String> {
+    if let Some(limit) = tail_lines {
+        if lines.len() > limit {
+            let drain = lines.len() - limit;
+            lines.drain(0..drain);
+        }
+    }
+    lines
+}
+
+fn log_line_style(line: &str) -> Style {
+    let fg = if line.contains(" ERROR ") || line.starts_with("ERROR ") || line.contains("[ERROR]") {
+        Color::Red
+    } else if line.contains(" WARN ") || line.starts_with("WARN ") || line.contains("[WARN]") {
+        Color::Yellow
+    } else if line.contains(" INFO ") || line.starts_with("INFO ") || line.contains("[INFO]") {
+        Color::Cyan
+    } else if line.contains(" DEBUG ") || line.starts_with("DEBUG ") || line.contains("[DEBUG]") {
+        Color::DarkGray
+    } else {
+        Color::White
+    };
+
+    Style::default().fg(fg)
 }
 
 impl ToggleControl {
@@ -836,6 +910,7 @@ mod tests {
         ToggleControl,
     };
     use crate::event::Key;
+    use std::fs;
 
     #[test]
     fn text_input_appends_and_deletes_chars() {
@@ -877,6 +952,35 @@ mod tests {
 
         control.append_entry("line-24");
         assert_eq!(control.scroll_offset, 12);
+    }
+
+    #[test]
+    fn log_output_can_refresh_from_file() {
+        let path = std::env::temp_dir().join(format!("tui01-log-{}.log", std::process::id()));
+        fs::write(&path, "line-a\nline-b\n").unwrap();
+
+        let mut control = super::LogOutputControl::from_file(&path);
+        assert!(control.content.contains("line-a"));
+
+        fs::write(&path, "line-c\n").unwrap();
+        control.refresh_from_file();
+        assert!(control.content.contains("line-c"));
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn log_output_respects_tail_lines_for_file_source() {
+        let path = std::env::temp_dir().join(format!("tui01-tail-{}.log", std::process::id()));
+        fs::write(&path, "a\nb\nc\nd\n").unwrap();
+
+        let mut control = super::LogOutputControl::from_file(&path);
+        control.set_tail_lines(2);
+        control.refresh_from_file();
+
+        assert_eq!(control.content, "c\nd");
+
+        let _ = fs::remove_file(path);
     }
 
     #[test]

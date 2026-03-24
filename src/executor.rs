@@ -1,5 +1,6 @@
 //! 异步操作执行器，负责运行真实命令并回传结果。
 
+use crate::framework_log::FrameworkLogger;
 use crate::host::{HostEvent, HostLogLevel, HostLogRecord, ShellPolicy};
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
@@ -136,6 +137,7 @@ pub struct OperationExecutor {
     shell_policy: ShellPolicy,
     event_hook: Option<Arc<dyn Fn(HostEvent) + Send + Sync>>,
     logger: Option<Arc<dyn Fn(HostLogRecord) + Send + Sync>>,
+    framework_logger: FrameworkLogger,
     sender: mpsc::UnboundedSender<OperationResult>,
     receiver: mpsc::UnboundedReceiver<OperationResult>,
 }
@@ -146,7 +148,13 @@ impl OperationExecutor {
     }
 
     pub fn with_registry(registry: ActionRegistry) -> Self {
-        Self::with_runtime(registry, ShellPolicy::AllowAll, None, None)
+        Self::with_runtime(
+            registry,
+            ShellPolicy::AllowAll,
+            None,
+            None,
+            FrameworkLogger::fallback(),
+        )
     }
 
     pub fn with_runtime(
@@ -154,6 +162,7 @@ impl OperationExecutor {
         shell_policy: ShellPolicy,
         event_hook: Option<Arc<dyn Fn(HostEvent) + Send + Sync>>,
         logger: Option<Arc<dyn Fn(HostLogRecord) + Send + Sync>>,
+        framework_logger: FrameworkLogger,
     ) -> Self {
         let (sender, receiver) = mpsc::unbounded_channel();
         Self {
@@ -161,6 +170,7 @@ impl OperationExecutor {
             shell_policy,
             event_hook,
             logger,
+            framework_logger,
             sender,
             receiver,
         }
@@ -187,6 +197,7 @@ impl OperationExecutor {
         let shell_policy = self.shell_policy;
         let event_hook = self.event_hook.clone();
         let logger = self.logger.clone();
+        let framework_logger = self.framework_logger.clone();
         let registered = match &request.source {
             OperationSource::ShellCommand(_) => None,
             OperationSource::RegisteredAction(name) => self.registry.resolve(name),
@@ -200,18 +211,17 @@ impl OperationExecutor {
                 source: source_description.clone(),
             });
         }
+        let start_record = HostLogRecord {
+            level: HostLogLevel::Info,
+            target: "tui01.operation".to_string(),
+            message: format!(
+                "started op={} screen={} block={} source={}",
+                request.operation_id, request.screen_index, request.block_index, source_description
+            ),
+        };
+        framework_logger.log(&start_record);
         if let Some(logger) = &logger {
-            logger(HostLogRecord {
-                level: HostLogLevel::Info,
-                target: "tui01.operation".to_string(),
-                message: format!(
-                    "started op={} screen={} block={} source={}",
-                    request.operation_id,
-                    request.screen_index,
-                    request.block_index,
-                    source_description
-                ),
-            });
+            logger(start_record);
         }
         tokio::spawn(async move {
             let context = ActionContext {
@@ -231,14 +241,16 @@ impl OperationExecutor {
                 request.allowed_env_keys.as_ref(),
             ) {
                 if let Some(logger) = &logger {
-                    logger(HostLogRecord {
+                    let record = HostLogRecord {
                         level: HostLogLevel::Warn,
                         target: "tui01.operation".to_string(),
                         message: format!(
                             "blocked by execution policy op={} source={} reason={}",
                             request.operation_id, source_description, error
                         ),
-                    });
+                    };
+                    framework_logger.log(&record);
+                    logger(record);
                 }
                 let result = OperationResult {
                     operation_id: request.operation_id,
@@ -266,14 +278,16 @@ impl OperationExecutor {
             let outcome = match &request.source {
                 OperationSource::ShellCommand(command) if shell_policy != ShellPolicy::AllowAll => {
                     if let Some(logger) = &logger {
-                        logger(HostLogRecord {
+                        let record = HostLogRecord {
                             level: HostLogLevel::Warn,
                             target: "tui01.operation".to_string(),
                             message: format!(
                                 "blocked inline shell by policy op={} source={}",
                                 request.operation_id, source_description
                             ),
-                        });
+                        };
+                        framework_logger.log(&record);
+                        logger(record);
                     }
                     ActionOutcome::failure("inline shell commands are disabled by host policy")
                 }
@@ -286,14 +300,16 @@ impl OperationExecutor {
                         if shell_policy == ShellPolicy::Disabled =>
                     {
                         if let Some(logger) = &logger {
-                            logger(HostLogRecord {
+                            let record = HostLogRecord {
                                 level: HostLogLevel::Warn,
                                 target: "tui01.operation".to_string(),
                                 message: format!(
                                     "blocked registered shell by policy op={} source={}",
                                     request.operation_id, source_description
                                 ),
-                            });
+                            };
+                            framework_logger.log(&record);
+                            logger(record);
                         }
                         ActionOutcome::failure(
                             "registered shell actions are disabled by host policy",
@@ -330,23 +346,25 @@ impl OperationExecutor {
                     stderr: result.stderr.clone(),
                 });
             }
+            let finish_record = HostLogRecord {
+                level: if result.success {
+                    HostLogLevel::Info
+                } else {
+                    HostLogLevel::Error
+                },
+                target: "tui01.operation".to_string(),
+                message: format!(
+                    "finished op={} screen={} block={} source={} success={}",
+                    result.operation_id,
+                    result.screen_index,
+                    result.block_index,
+                    source_description,
+                    result.success
+                ),
+            };
+            framework_logger.log(&finish_record);
             if let Some(logger) = &logger {
-                logger(HostLogRecord {
-                    level: if result.success {
-                        HostLogLevel::Info
-                    } else {
-                        HostLogLevel::Error
-                    },
-                    target: "tui01.operation".to_string(),
-                    message: format!(
-                        "finished op={} screen={} block={} source={} success={}",
-                        result.operation_id,
-                        result.screen_index,
-                        result.block_index,
-                        source_description,
-                        result.success
-                    ),
-                });
+                logger(finish_record);
             }
 
             let _ = sender.send(result);
@@ -479,9 +497,14 @@ mod tests {
         render_command_template, shell_escape, ActionOutcome, ActionRegistry, OperationExecutor,
         OperationRequest, OperationSource,
     };
+    use crate::framework_log::FrameworkLogger;
     use crate::host::{HostEvent, HostLogLevel, HostLogRecord, ShellPolicy};
     use std::collections::{HashMap, HashSet};
     use std::sync::{Arc, Mutex};
+
+    fn test_framework_logger() -> FrameworkLogger {
+        FrameworkLogger::new(std::env::temp_dir()).unwrap()
+    }
 
     #[test]
     fn action_template_renders_with_shell_escaped_runtime_params() {
@@ -652,6 +675,7 @@ mod tests {
             ShellPolicy::RegisteredOnly,
             None,
             None,
+            test_framework_logger(),
         );
 
         executor.submit(OperationRequest {
@@ -694,6 +718,7 @@ mod tests {
             ShellPolicy::AllowAll,
             Some(hook),
             None,
+            test_framework_logger(),
         );
 
         executor.submit(OperationRequest {
@@ -748,6 +773,7 @@ mod tests {
             ShellPolicy::AllowAll,
             None,
             Some(logger),
+            test_framework_logger(),
         );
 
         executor.submit(OperationRequest {

@@ -8,6 +8,7 @@ pub mod builder;
 pub mod components;
 pub mod event;
 pub mod executor;
+pub mod framework_log;
 pub mod host;
 pub mod runtime;
 pub mod schema;
