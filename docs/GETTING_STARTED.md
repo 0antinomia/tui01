@@ -21,6 +21,8 @@
 1. 跑通现成样板  
    使用 [examples/host_template.rs](/Users/bcsy/Desktop/myproject/tui01/examples/host_template.rs)
 
+仓库根目录下的 `cargo run` 只用于框架自身的默认应用，不作为推荐宿主接入样板。
+
 2. 复制宿主工程骨架  
    参考 [templates/host_project/README.md](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/README.md)
 

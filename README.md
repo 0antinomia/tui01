@@ -72,17 +72,21 @@ let app = AppSpec::new()
     .into_showcase_app();
 ```
 
-## 运行 demo
-
-```bash
-cargo run --bin demo
-```
-
-默认入口：
+## 运行入口
 
 ```bash
 cargo run
 ```
+
+上面的默认入口主要用于框架仓库内自检和快速观察当前 UI 行为，不作为推荐宿主接入样板。
+
+宿主模板：
+
+```bash
+cargo run --example host_template
+```
+
+真实项目接入时，优先参考 [examples/host_template.rs](/Users/bcsy/Desktop/myproject/tui01/examples/host_template.rs) 和 [templates/host_project/README.md](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/README.md)。
 
 ## 字段类型
 
