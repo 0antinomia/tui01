@@ -208,3 +208,7 @@ field::action_to_log("同步", "执行", "sync_action", "sync_log")
 - [docs/VERSIONING.md](/Users/bcsy/Desktop/myproject/tui01/docs/VERSIONING.md)
 - [docs/RELEASE_SCOPE.md](/Users/bcsy/Desktop/myproject/tui01/docs/RELEASE_SCOPE.md)
 - [CHANGELOG.md](/Users/bcsy/Desktop/myproject/tui01/CHANGELOG.md)
+
+## 许可证
+
+本项目采用 `MIT OR Apache-2.0` 双证书。
