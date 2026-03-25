@@ -30,8 +30,8 @@ cargo run
 
 推荐按这个顺序接入：
 
-1. 跑通 [examples/host_template.rs](/Users/bcsy/Desktop/myproject/tui01/examples/host_template.rs)
-2. 复制 [templates/host_project](/Users/bcsy/Desktop/myproject/tui01/templates/host_project) 到你的项目
+1. 跑通 [examples/host_template.rs](examples/host_template.rs)
+2. 复制 [templates/host_project](templates/host_project) 到你的项目
 3. 在 `src/actions.rs` 里先注册动作
 4. 在 `src/app.rs` 里再写页面
 5. 用 `try_into_showcase_app_with_host(host)` 完成装配
@@ -203,11 +203,11 @@ field::action_to_log("同步", "执行", "sync_action", "sync_log")
 
 ## 进一步阅读
 
-- [docs/GETTING_STARTED.md](/Users/bcsy/Desktop/myproject/tui01/docs/GETTING_STARTED.md)
-- [templates/host_project/README.md](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/README.md)
-- [docs/VERSIONING.md](/Users/bcsy/Desktop/myproject/tui01/docs/VERSIONING.md)
-- [docs/RELEASE_SCOPE.md](/Users/bcsy/Desktop/myproject/tui01/docs/RELEASE_SCOPE.md)
-- [CHANGELOG.md](/Users/bcsy/Desktop/myproject/tui01/CHANGELOG.md)
+- [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
+- [templates/host_project/README.md](templates/host_project/README.md)
+- [docs/VERSIONING.md](docs/VERSIONING.md)
+- [docs/RELEASE_SCOPE.md](docs/RELEASE_SCOPE.md)
+- [CHANGELOG.md](CHANGELOG.md)
 
 ## 许可证
 

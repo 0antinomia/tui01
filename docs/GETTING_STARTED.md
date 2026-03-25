@@ -20,7 +20,7 @@ cargo run
 
 推荐顺序：
 
-1. 复制 [templates/host_project](/Users/bcsy/Desktop/myproject/tui01/templates/host_project)
+1. 复制 [templates/host_project](../templates/host_project)
 2. 在 `src/host.rs` 里收紧宿主策略
 3. 在 `src/actions.rs` 里注册动作
 4. 在 `src/app.rs` 里定义页面

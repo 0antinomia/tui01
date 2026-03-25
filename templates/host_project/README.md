@@ -43,7 +43,7 @@ your-app/
 
 ## 参考文件
 
-- [main.rs](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/main.rs)
-- [host.rs](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/host.rs)
-- [actions.rs](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/actions.rs)
-- [app.rs](/Users/bcsy/Desktop/myproject/tui01/templates/host_project/app.rs)
+- [main.rs](main.rs)
+- [host.rs](host.rs)
+- [actions.rs](actions.rs)
+- [app.rs](app.rs)
