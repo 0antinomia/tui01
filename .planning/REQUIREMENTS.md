@@ -19,12 +19,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### 模块组织
 
-- [ ] **MOD-01**: src/ 重组为领域子模块（spec/、runtime/、controls/、components/、host/、app/、infra/ 等）
-- [ ] **MOD-02**: content_panel.rs（1526 行）按职责拆分为聚焦的子模块
+- [x] **MOD-01**: src/ 重组为领域子模块（spec/、runtime/、controls/、components/、host/、app/、infra/ 等）
+- [x] **MOD-02**: content_panel.rs（1526 行）按职责拆分为聚焦的子模块
 - [x] **MOD-03**: controls.rs（1008 行）按控件类型拆分为独立文件
-- [ ] **MOD-04**: executor.rs（870 行）按职责拆分（执行器、注册表、shell 命令、模板渲染）
-- [ ] **MOD-05**: showcase.rs（813 行）拆分，提取屏幕管理、操作轮询等子模块
-- [ ] **MOD-06**: lib.rs 通过 pub mod + re-export 保持稳定入口
+- [x] **MOD-04**: executor.rs（870 行）按职责拆分（执行器、注册表、shell 命令、模板渲染）
+- [x] **MOD-05**: showcase.rs（813 行）拆分，提取屏幕管理、操作轮询等子模块
+- [x] **MOD-06**: lib.rs 通过 pub mod + re-export 保持稳定入口
 - [ ] **MOD-07**: 公开 API 可重新设计但保持语义等价
 
 ### 未来扩展点
@@ -81,12 +81,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CTRL-05 | Phase 2: Control Isolation and Enum Unification | Pending |
 | CTRL-06 | Phase 3: Custom Control Extension | Complete |
 | CTRL-07 | All phases | Complete |
-| MOD-01 | Phase 4: Module Hierarchy Restructuring | Pending |
-| MOD-02 | Phase 5: Large File Decomposition | Pending |
+| MOD-01 | Phase 4: Module Hierarchy Restructuring | Complete (P01) |
+| MOD-02 | Phase 5: Large File Decomposition | Complete |
 | MOD-03 | Phase 2: Control Isolation and Enum Unification | Complete |
-| MOD-04 | Phase 5: Large File Decomposition | Pending |
-| MOD-05 | Phase 5: Large File Decomposition | Pending |
-| MOD-06 | Phase 4: Module Hierarchy Restructuring | Pending |
+| MOD-04 | Phase 5: Large File Decomposition | Complete |
+| MOD-05 | Phase 5: Large File Decomposition | Complete |
+| MOD-06 | Phase 4: Module Hierarchy Restructuring | Complete (P01) |
 | MOD-07 | Phase 6: Extension Points and Public API | Pending |
 | EXT-01 | Phase 6: Extension Points and Public API | Pending |
 | EXT-02 | Phase 6: Extension Points and Public API | Pending |

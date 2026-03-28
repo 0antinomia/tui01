@@ -1,6 +1,6 @@
 //! 框架内部运行日志记录器。
 
-use crate::host::{HostLogLevel, HostLogRecord};
+use super::host_types::{HostLogLevel, HostLogRecord};
 use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -92,7 +92,7 @@ fn level_name(level: HostLogLevel) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::FrameworkLogger;
-    use crate::host::{HostLogLevel, HostLogRecord};
+    use crate::host::host_types::{HostLogLevel, HostLogRecord};
     use std::fs;
     use std::path::Path;
     use std::path::PathBuf;

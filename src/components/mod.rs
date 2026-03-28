@@ -1,18 +1,12 @@
 //! `Component` trait 及其实现。
 
 mod content_panel;
-mod controls;
 mod menu;
 mod quadrant;
 mod status_panel;
 mod title_panel;
 
 pub use content_panel::ContentPanel;
-pub use controls::{
-    ActionButtonControl, ActionButtonKind, AnyControl, BuiltinControl, ControlFeedback, DataDisplayControl,
-    LogOutputControl, NumberInputControl, SelectControl, TextInputControl, ToggleControl,
-};
-pub use controls::ControlTrait;
 pub use menu::{MenuComponent, MenuItem, MenuState};
 pub use quadrant::{QuadrantConfig, QuadrantLayout};
 pub use status_panel::StatusPanel;

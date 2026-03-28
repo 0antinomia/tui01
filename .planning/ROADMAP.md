@@ -65,7 +65,7 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md -- Extend ControlTrait with cloneable-trait-object methods, define AnyControl enum and ControlRegistry
-- [ ] 03-02-PLAN.md -- Migrate pipeline from BuiltinControl to AnyControl, add custom control declaration API
+- [x] 03-02-PLAN.md -- Migrate pipeline from BuiltinControl to AnyControl, add custom control declaration API
 
 ### Phase 4: Module Hierarchy Restructuring
 **Goal**: Source files are organized into domain-aligned submodules with clear boundaries and stable re-export entry points
@@ -76,7 +76,11 @@ Plans:
   2. lib.rs provides stable pub mod + re-export entry points; downstream code imports work without reaching into internal module paths
   3. All 87+ tests pass after reorganization
   4. No file remains at src/ top level except lib.rs (and main.rs if applicable); all domain code lives in submodules
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [x] 04-01-PLAN.md -- Create leaf domain modules (infra/, controls/) and re-export aliases in lib.rs
+- [x] 04-02-PLAN.md -- Create remaining domain modules (runtime/, spec/, host/, app/) and complete hierarchy
 
 ### Phase 5: Large File Decomposition
 **Goal**: No source file exceeds 300 lines; each module has a single, focused responsibility
@@ -88,7 +92,12 @@ Plans:
   3. showcase.rs (813 lines) is split with screen management and operation polling extracted into separate sub-modules
   4. No file in the codebase exceeds 300 lines
   5. All 87+ tests pass; no async behavior change (tokio spawn + mpsc logic remains identical)
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [x] 05-01-PLAN.md -- Split executor.rs into host/executor/ directory with facade + 4 sub-modules (types, registry, executor_core, shell)
+- [x] 05-02-PLAN.md -- Split content_panel.rs into components/content_panel/ directory with facade + 4 sub-modules (layout, render, interaction, operations) + dual-state debug_assert guards
+- [x] 05-03-PLAN.md -- Split showcase.rs into app/showcase/ directory with facade + 3 sub-modules (screen_manager, operation_poll, tea_core)
 
 ### Phase 6: Extension Points and Public API
 **Goal**: Theme, layout strategy, and render context seams are in place for future extensibility, and the public API is finalized
@@ -111,7 +120,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 |-------|----------------|--------|-----------|
 | 1. Control Trait Extraction | 2/2 | Complete | 2026-03-28 |
 | 2. Control Isolation and Enum Unification | 2/2 | Complete | 2026-03-28 |
-| 3. Custom Control Extension | 1/2 | In progress | - |
-| 4. Module Hierarchy Restructuring | 0/? | Not started | - |
-| 5. Large File Decomposition | 0/? | Not started | - |
+| 3. Custom Control Extension | 2/2 | Complete | 2026-03-28 |
+| 4. Module Hierarchy Restructuring | 2/2 | Complete | 2026-03-28 |
+| 5. Large File Decomposition | 0/3 | Not started | - |
 | 6. Extension Points and Public API | 0/? | Not started | - |

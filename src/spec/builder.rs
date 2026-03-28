@@ -3,9 +3,8 @@
 use crate::schema::{PageSpec, SectionSpec};
 use crate::showcase::{ShowcaseApp, ShowcaseCopy, ShowcaseScreen};
 use crate::{
-    executor::ActionRegistry,
-    host::RuntimeHost,
-    components::{AnyControl, BuiltinControl},
+    host::{ActionRegistry, RuntimeHost},
+    controls::{AnyControl, BuiltinControl},
     runtime::OperationSource,
 };
 use std::collections::{HashMap, HashSet};
@@ -307,7 +306,7 @@ impl Default for AppSpec {
 #[cfg(test)]
 mod tests {
     use super::{page, screen, section, AppSpec, AppValidationError};
-    use crate::executor::{ActionOutcome, ActionRegistry};
+    use crate::host::{ActionOutcome, ActionRegistry};
     use crate::host::RuntimeHost;
     use crate::schema::FieldSpec;
 

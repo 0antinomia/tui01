@@ -1,4 +1,4 @@
-//! 控件子模块：各控件类型的独立实现文件和统一导出。
+//! 控件模块：各控件类型的独立实现文件和统一导出。
 
 pub mod action_button;
 pub mod control_trait;

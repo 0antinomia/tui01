@@ -1,6 +1,6 @@
 //! 与界面渲染解耦的运行时页面状态定义。
 
-use crate::components::{
+use crate::controls::{
     ActionButtonControl, AnyControl, BuiltinControl, DataDisplayControl, LogOutputControl,
     NumberInputControl, SelectControl, TextInputControl, ToggleControl,
 };
@@ -561,7 +561,7 @@ mod tests {
         OperationSource, OperationStatus, RuntimeControl, RuntimeField, RuntimeOperation,
         RuntimePage, RuntimeSection,
     };
-    use crate::components::TextInputControl;
+    use crate::controls::TextInputControl;
 
     #[test]
     fn runtime_page_converts_to_content_blueprint() {

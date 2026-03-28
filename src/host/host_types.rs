@@ -1,7 +1,7 @@
 //! 宿主侧运行时接入面。
 
-use crate::components::ControlTrait;
-use crate::executor::{ActionContext, ActionOutcome, ActionRegistry};
+use crate::controls::ControlTrait;
+use super::executor::{ActionContext, ActionOutcome, ActionRegistry};
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -338,7 +338,7 @@ impl RuntimeHost {
 #[cfg(test)]
 mod tests {
     use super::{HostEvent, HostLogLevel, HostLogRecord, RuntimeHost, ShellPolicy};
-    use crate::executor::ActionOutcome;
+    use crate::host::executor::ActionOutcome;
     use std::sync::{Arc, Mutex};
 
     #[test]
@@ -446,8 +446,8 @@ mod tests {
 
     #[test]
     fn control_registry_registers_and_creates() {
-        use crate::components::ControlTrait;
-        use crate::components::TextInputControl;
+        use crate::controls::ControlTrait;
+        use crate::controls::TextInputControl;
 
         let mut host = RuntimeHost::new();
         host.register_control("my_text", || {

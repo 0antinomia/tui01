@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 3 context gathered
-last_updated: "2026-03-28T09:25:15.379Z"
+status: verifying
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-28T13:38:25.792Z"
 last_activity: 2026-03-28
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
-  percent: 17
+  completed_phases: 5
+  total_plans: 11
+  completed_plans: 11
+  percent: 22
 ---
 
 # Project State
@@ -21,24 +21,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** New control extension only requires 1-3 file changes, not the current 10
-**Current focus:** Phase 03 — custom-control-extension
+**Current focus:** Phase 05 — large-file-decomposition
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: Executing Phase 03
+Phase: 05 (large-file-decomposition) — EXECUTING
+Plan: 3 of 3
+Status: Phase complete — ready for verification
 Last activity: 2026-03-28
 
-Progress: [██░░░░░░░░] 17%
+Progress: [██░░░░░░░░] 22%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 2
+- Total plans completed: 4
 - Average duration: 5min
-- Total execution time: 0.2 hours
+- Total execution time: 0.3 hours
 
 **By Phase:**
 
@@ -48,12 +48,17 @@ Progress: [██░░░░░░░░] 17%
 
 **Recent Trend:**
 
-- Last 5 plans: 6min, 4min
+- Last 5 plans: 6min, 4min, 4min, 4min, 6min
 - Trend: Stable
 
 | Phase 01 P01 | 6min | 2 tasks | 4 files |
 | Phase 01 P02 | 4min | 1 task | 2 files |
 | Phase 02 P01 | 4min | 1 tasks | 12 files |
+| Phase 04 P01 | 4min | 1 task | 21 files |
+| Phase 04 P02 | 6min | 1 task | 16 files |
+| Phase 05 P01 | 9min | 2 tasks | 6 files |
+| Phase 05 P03 | 11min | 2 tasks | 5 files |
+| Phase 05 P02 | 18min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -71,6 +76,15 @@ Recent decisions affecting current work:
 - [Phase 01]: ControlKind methods are thin wrappers delegating to inner control's trait implementations
 - [Phase 02]: One-file-per-control-type pattern: struct + inherent impl + ControlTrait impl + private helpers + co-located tests
 - [Phase 02]: LogOutputControl at 275 lines accepted as largest control -- splitting further breaks the one-file-per-control pattern
+- [Phase 04]: infra/ and controls/ as top-level domain modules per D-01 module hierarchy design
+- [Phase 04]: host/ sub-modules use pub mod for re-export; FocusTarget stays private to showcase; test modules in host/ use crate::host:: absolute paths
+- [Phase 05]: Tests import shell functions via super::shell:: path instead of pub(super) use re-export (Rust E0364)
+- [Phase 05]: RegisteredAction uses pub(super) in registry.rs for executor_core access
+- [Phase 05]: Showcase sub-modules use free functions taking &mut ShowcaseApp parameter, accessing private fields via child module privilege
+- [Phase 05]: cfg(test) bridge methods on facade structs allow tests to call sub-module functions without import path changes
+- [Phase 05]: scope_slug stays in mod.rs for test access via super::scope_slug (D-10)
+- [Phase 05]: Test-only delegate methods use #[cfg(test)] to avoid dead_code warnings
+- [Phase 05]: Sub-modules call their own internal functions directly instead of facade delegates
 
 ### Pending Todos
 
@@ -84,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T06:10:19.410Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-custom-control-extension/03-CONTEXT.md
+Last session: 2026-03-28T13:38:25.790Z
+Stopped at: Completed 05-02-PLAN.md
+Resume file: None
