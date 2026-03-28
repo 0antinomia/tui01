@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-03-28T13:38:25.792Z"
+status: executing
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-28T15:34:14.833Z"
 last_activity: 2026-03-28
 progress:
   total_phases: 6
-  completed_phases: 5
-  total_plans: 11
-  completed_plans: 11
+  completed_phases: 6
+  total_plans: 13
+  completed_plans: 13
   percent: 22
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** New control extension only requires 1-3 file changes, not the current 10
-**Current focus:** Phase 05 — large-file-decomposition
+**Current focus:** Phase 06 — extension-points-and-public-api
 
 ## Current Position
 
-Phase: 05 (large-file-decomposition) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
+Phase: 06
+Plan: Not started
+Status: Ready to execute
 Last activity: 2026-03-28
 
 Progress: [██░░░░░░░░] 22%
@@ -59,6 +59,7 @@ Progress: [██░░░░░░░░] 22%
 | Phase 05 P01 | 9min | 2 tasks | 6 files |
 | Phase 05 P03 | 11min | 2 tasks | 5 files |
 | Phase 05 P02 | 18min | 2 tasks | 6 files |
+| Phase 06 P01 | 5min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,9 @@ Recent decisions affecting current work:
 - [Phase 05]: scope_slug stays in mod.rs for test access via super::scope_slug (D-10)
 - [Phase 05]: Test-only delegate methods use #[cfg(test)] to avoid dead_code warnings
 - [Phase 05]: Sub-modules call their own internal functions directly instead of facade delegates
+- [Phase 06]: lib.rs module registration moved to Task 1 (required for compilation/testing of theme module)
+- [Phase 06]: Theme uses manual Default impl (Color has no Default trait)
+- [Phase 06]: serde_json added as dev-dependency for round-trip test
 
 ### Pending Todos
 
@@ -98,6 +102,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T13:38:25.790Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-03-28T14:50:19.805Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None

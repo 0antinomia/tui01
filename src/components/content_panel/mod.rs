@@ -12,6 +12,7 @@ use crate::host::executor::{OperationRequest, OperationResult};
 use crate::runtime::{
     ContentBlock, ContentBlueprint, ContentRuntimeState, OperationStatus, RuntimeFieldState,
 };
+use crate::theme::Theme;
 use ratatui::{
     layout::Rect,
     Frame,
@@ -42,6 +43,7 @@ pub struct ContentPanel {
     runtime: ContentRuntimeState,
     focused: bool,
     control_active: bool,
+    pub(super) theme: Theme,
 }
 
 impl ContentPanel {
@@ -57,7 +59,13 @@ impl ContentPanel {
             runtime: ContentRuntimeState::default(),
             focused: false,
             control_active: false,
+            theme: Theme::default(),
         }
+    }
+
+    /// 设置主题（由 ShowcaseApp 同步调用）。
+    pub fn set_theme(&mut self, theme: Theme) {
+        self.theme = theme;
     }
 
     pub fn set_blueprint(&mut self, blueprint: ContentBlueprint) {

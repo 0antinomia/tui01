@@ -4,6 +4,8 @@ use super::layout::{ContentPage, current_page_body, effective_height, gutter_wid
 use super::ContentPanel;
 use crate::controls::{AnyControl, ControlFeedback};
 use crate::runtime::{ContentBlock, OperationStatus};
+use crate::theme::RenderContext;
+
 use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
@@ -16,11 +18,9 @@ fn render_control(
     control: &AnyControl,
     area: Rect,
     buf: &mut ratatui::buffer::Buffer,
-    selected: bool,
-    active: bool,
-    feedback: ControlFeedback,
+    ctx: &RenderContext,
 ) {
-    control.render(area, buf, selected, active, feedback)
+    control.render(area, buf, ctx)
 }
 
 pub(super) fn render_content_panel(panel: &mut ContentPanel, f: &mut Frame, rect: Rect) {
@@ -171,9 +171,12 @@ pub(super) fn render_content_block(
         panel.block_control(block_index).unwrap_or(&block.control),
         control_rect,
         f.buffer_mut(),
-        selected && panel.focused,
-        selected && panel.focused && panel.control_active,
-        feedback,
+        &RenderContext {
+            theme: panel.theme,
+            selected: selected && panel.focused,
+            active: selected && panel.focused && panel.control_active,
+            feedback,
+        },
     );
 }
 

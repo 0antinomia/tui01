@@ -21,6 +21,7 @@ pub use text_input::TextInputControl;
 pub use toggle::ToggleControl;
 
 use crate::event::Key;
+use crate::theme::RenderContext;
 use ratatui::{buffer::Buffer, layout::Rect};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,19 +53,17 @@ impl BuiltinControl {
         &self,
         area: Rect,
         buf: &mut Buffer,
-        selected: bool,
-        active: bool,
-        feedback: ControlFeedback,
+        ctx: &RenderContext,
     ) {
         match self {
-            Self::TextInput(c) => c.render(area, buf, selected, active, feedback),
-            Self::NumberInput(c) => c.render(area, buf, selected, active, feedback),
-            Self::Select(c) => c.render(area, buf, selected, active, feedback),
-            Self::Toggle(c) => c.render(area, buf, selected, active, feedback),
-            Self::ActionButton(c) => c.render(area, buf, selected, active, feedback),
-            Self::StaticData(c) => c.render(area, buf, selected, active, feedback),
-            Self::DynamicData(c) => c.render(area, buf, selected, active, feedback),
-            Self::LogOutput(c) => c.render(area, buf, selected, active, feedback),
+            Self::TextInput(c) => c.render(area, buf, ctx),
+            Self::NumberInput(c) => c.render(area, buf, ctx),
+            Self::Select(c) => c.render(area, buf, ctx),
+            Self::Toggle(c) => c.render(area, buf, ctx),
+            Self::ActionButton(c) => c.render(area, buf, ctx),
+            Self::StaticData(c) => c.render(area, buf, ctx),
+            Self::DynamicData(c) => c.render(area, buf, ctx),
+            Self::LogOutput(c) => c.render(area, buf, ctx),
         }
     }
 
@@ -162,10 +161,10 @@ impl std::fmt::Debug for AnyControl {
 }
 
 impl AnyControl {
-    pub fn render(&self, area: Rect, buf: &mut Buffer, selected: bool, active: bool, feedback: ControlFeedback) {
+    pub fn render(&self, area: Rect, buf: &mut Buffer, ctx: &RenderContext) {
         match self {
-            Self::Builtin(bc) => bc.render(area, buf, selected, active, feedback),
-            Self::Custom(cc) => cc.render(area, buf, selected, active, feedback),
+            Self::Builtin(bc) => bc.render(area, buf, ctx),
+            Self::Custom(cc) => cc.render(area, buf, ctx),
         }
     }
 

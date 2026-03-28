@@ -6,3 +6,4 @@ pub use crate::field;
 pub use crate::host::{HostEvent, HostLogLevel, HostLogRecord, RuntimeHost, ShellPolicy};
 pub use crate::controls::ControlTrait;
 pub use crate::host::ControlRegistry;
+pub use crate::theme::{LayoutAreas, LayoutStrategy, RenderContext, Theme};

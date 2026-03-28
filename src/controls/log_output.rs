@@ -11,8 +11,9 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Widget},
 };
 
-use super::control_trait::{ControlFeedback, ControlTrait};
+use super::control_trait::ControlTrait;
 use super::helpers::{left_aligned_control_rect, wrap_text_lines};
+use crate::theme::RenderContext;
 use std::any::Any;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -164,7 +165,7 @@ fn log_line_style(line: &str) -> Style {
 }
 
 impl ControlTrait for LogOutputControl {
-    fn render(&self, area: Rect, buf: &mut Buffer, selected: bool, active: bool, _feedback: ControlFeedback) {
+    fn render(&self, area: Rect, buf: &mut Buffer, ctx: &RenderContext) {
         let area = left_aligned_control_rect(area, 36);
         if area.width <= 2 || area.height == 0 {
             return;
@@ -173,9 +174,9 @@ impl ControlTrait for LogOutputControl {
         let block = Block::default()
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
-            .style(Style::default().fg(if active {
+            .style(Style::default().fg(if ctx.active {
                 Color::Cyan
-            } else if selected {
+            } else if ctx.selected {
                 Color::White
             } else {
                 Color::Gray

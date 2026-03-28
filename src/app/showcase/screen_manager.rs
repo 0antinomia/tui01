@@ -4,6 +4,7 @@ use super::ShowcaseApp;
 use crate::components::Component;
 
 pub(super) fn sync_panels(app: &mut ShowcaseApp) {
+    app.content_panel.set_theme(app.theme);
     app.title_panel.set_text(app.copy.title_text.clone());
 
     let selected = app

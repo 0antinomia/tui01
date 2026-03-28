@@ -23,16 +23,16 @@ tui01 是一个基于 ratatui 的 Rust TUI 框架（当前 v0.1.0），提供四
 - ✓ 框架日志系统（FrameworkLogger） — existing
 - ✓ ControlTrait 统一接口（7 methods, 8 controls） — Phase 1
 - ✓ 控件 trait dispatch 替代 clone-then-wrap 模式 — Phase 1
+- ✓ 大文件拆分：executor.rs(870行)、content_panel.rs(1502行)、showcase.rs(825行) 按职责拆分为目录模块 — Phase 5
+- ✓ src/ 模块分层重组：建立清晰的子模块层级（host/、app/、components/） — Phase 4
 
 ### Active
 
-- [ ] 大文件拆分：content_panel.rs(1526行)、controls.rs(按需拆分)、executor.rs(870行)、showcase.rs(813行) 按职责拆分
 - [ ] 控件扩展机制简化：新增控件类型只需改 1-2 个文件（ControlTrait foundation laid, BuiltinControl enum next）
 - [ ] 公开 API 重新设计：保持语义等价但结构更合理
 - [ ] 为主题/风格系统预留扩展点
 - [ ] 为灵活布局系统（非仅四分区）预留扩展点
 - [ ] 为插件/自定义控件预留扩展点
-- [ ] src/ 模块分层重组：建立清晰的子模块层级，取代当前 16 个文件平铺
 
 ### Out of Scope
 
@@ -100,4 +100,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-28 after Phase 4 completion*
+*Last updated: 2026-03-28 after Phase 6 completion — all phases done*

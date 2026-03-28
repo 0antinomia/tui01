@@ -14,6 +14,7 @@ use crate::host::{ActionRegistry, OperationExecutor, RuntimeHost};
 use crate::host::FrameworkLogger;
 use crate::runtime::ContentBlueprint;
 use crate::schema::PageSpec;
+use crate::theme::{LayoutStrategy, Theme};
 use crate::tui::{self, MAX_ASPECT_RATIO, MIN_ASPECT_RATIO, MIN_HEIGHT, MIN_WIDTH};
 use ratatui::{
     layout::Rect,
@@ -37,6 +38,8 @@ pub struct ShowcaseApp {
     next_operation_id: u64,
     copy: ShowcaseCopy,
     focus: FocusTarget,
+    theme: Theme,
+    layout_strategy: Box<dyn LayoutStrategy>,
 }
 
 enum SizeError {
@@ -139,6 +142,8 @@ impl ShowcaseApp {
             next_operation_id: 1,
             copy,
             focus: FocusTarget::Menu,
+            theme: Theme::default(),
+            layout_strategy: Box::new(QuadrantLayout::new(QuadrantConfig::default())),
         };
         app.content_panel.blur();
         screen_manager::sync_panels(&mut app);
@@ -159,13 +164,12 @@ impl ShowcaseApp {
         self.quadrant_layout.render(frame, area);
         screen_manager::sync_panels(self);
 
-        let (top_left, top_right, bottom_left, bottom_right) =
-            self.quadrant_layout.calculate_quadrants(area);
+        let areas = self.layout_strategy.areas(area);
 
-        self.title_panel.render(frame, top_left);
-        self.status_panel.render(frame, top_right);
-        self.menu.render(frame, bottom_left);
-        self.content_panel.render(frame, bottom_right);
+        self.title_panel.render(frame, areas.title);
+        self.status_panel.render(frame, areas.status);
+        self.menu.render(frame, areas.menu);
+        self.content_panel.render(frame, areas.content);
     }
 
     pub fn active_screen(&self) -> usize {
@@ -178,6 +182,16 @@ impl ShowcaseApp {
 
     pub fn has_size_error(&self) -> bool {
         self.size_error.is_some()
+    }
+
+    /// 设置自定义主题。
+    pub fn set_theme(&mut self, theme: Theme) {
+        self.theme = theme;
+    }
+
+    /// 设置自定义布局策略。
+    pub fn set_layout_strategy(&mut self, strategy: Box<dyn LayoutStrategy>) {
+        self.layout_strategy = strategy;
     }
 
     pub fn content_page(&self) -> usize {
@@ -228,8 +242,8 @@ impl ShowcaseApp {
     fn current_content_rect(&self) -> Rect {
         let (width, height) = tui::terminal_size().unwrap_or((MIN_WIDTH, MIN_HEIGHT));
         let area = Rect::new(0, 0, width, height);
-        let (_, _, _, bottom_right) = self.quadrant_layout.calculate_quadrants(area);
-        bottom_right
+        let areas = self.layout_strategy.areas(area);
+        areas.content
     }
 
     fn check_size(w: u16, h: u16) -> Option<SizeError> {

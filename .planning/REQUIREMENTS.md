@@ -25,12 +25,12 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **MOD-04**: executor.rs（870 行）按职责拆分（执行器、注册表、shell 命令、模板渲染）
 - [x] **MOD-05**: showcase.rs（813 行）拆分，提取屏幕管理、操作轮询等子模块
 - [x] **MOD-06**: lib.rs 通过 pub mod + re-export 保持稳定入口
-- [ ] **MOD-07**: 公开 API 可重新设计但保持语义等价
+- [x] **MOD-07**: 公开 API 可重新设计但保持语义等价
 
 ### 未来扩展点
 
-- [ ] **EXT-01**: Theme struct 定义（类型化、语义槽位如 border/selected/active/error/success、支持 Serde derive）
-- [ ] **EXT-02**: LayoutStrategy trait 定义，当前四分区布局作为默认实现
+- [x] **EXT-01**: Theme struct 定义（类型化、语义槽位如 border/selected/active/error/success、支持 Serde derive）
+- [x] **EXT-02**: LayoutStrategy trait 定义，当前四分区布局作为默认实现
 - [ ] **EXT-03**: 渲染路径预留 RenderContext 参数位（承载 Theme、Layout 信息）
 - [ ] **EXT-04**: AppSpec 构建器支持链式配置 Theme 和 LayoutStrategy
 
@@ -87,9 +87,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MOD-04 | Phase 5: Large File Decomposition | Complete |
 | MOD-05 | Phase 5: Large File Decomposition | Complete |
 | MOD-06 | Phase 4: Module Hierarchy Restructuring | Complete (P01) |
-| MOD-07 | Phase 6: Extension Points and Public API | Pending |
-| EXT-01 | Phase 6: Extension Points and Public API | Pending |
-| EXT-02 | Phase 6: Extension Points and Public API | Pending |
+| MOD-07 | Phase 6: Extension Points and Public API | Complete |
+| EXT-01 | Phase 6: Extension Points and Public API | Complete |
+| EXT-02 | Phase 6: Extension Points and Public API | Complete |
 | EXT-03 | Phase 6: Extension Points and Public API | Pending |
 | EXT-04 | Phase 6: Extension Points and Public API | Pending |
 

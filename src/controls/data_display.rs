@@ -8,8 +8,9 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Widget},
 };
 
-use super::control_trait::{ControlFeedback, ControlTrait};
+use super::control_trait::ControlTrait;
 use super::helpers::{left_aligned_control_rect, truncate_to_chars};
+use crate::theme::RenderContext;
 use std::any::Any;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,7 +36,7 @@ impl DataDisplayControl {
 }
 
 impl ControlTrait for DataDisplayControl {
-    fn render(&self, area: Rect, buf: &mut Buffer, selected: bool, active: bool, _feedback: ControlFeedback) {
+    fn render(&self, area: Rect, buf: &mut Buffer, ctx: &RenderContext) {
         let area = left_aligned_control_rect(area, 24);
         if area.width <= 2 || area.height == 0 {
             return;
@@ -44,9 +45,9 @@ impl ControlTrait for DataDisplayControl {
         let border = Block::default()
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
-            .style(Style::default().fg(if active {
+            .style(Style::default().fg(if ctx.active {
                 Color::Cyan
-            } else if selected {
+            } else if ctx.selected {
                 Color::White
             } else {
                 Color::Gray

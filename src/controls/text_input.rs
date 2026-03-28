@@ -8,8 +8,9 @@ use ratatui::{
     widgets::{Paragraph, Widget},
 };
 
-use super::control_trait::{ControlFeedback, ControlTrait};
+use super::control_trait::ControlTrait;
 use super::helpers::{framed_block, left_aligned_control_rect, render_feedback_marker};
+use crate::theme::RenderContext;
 use std::any::Any;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,7 +40,7 @@ impl TextInputControl {
 }
 
 impl ControlTrait for TextInputControl {
-    fn render(&self, area: Rect, buf: &mut Buffer, selected: bool, active: bool, feedback: ControlFeedback) {
+    fn render(&self, area: Rect, buf: &mut Buffer, ctx: &RenderContext) {
         let area = left_aligned_control_rect(area, 22);
         let display = if self.value.is_empty() {
             self.placeholder.as_str()
@@ -51,18 +52,18 @@ impl ControlTrait for TextInputControl {
         } else {
             Style::default().fg(Color::White)
         };
-        let display = if active {
+        let display = if ctx.active {
             format!("{display}▏")
         } else {
             display.to_string()
         };
-        let block = framed_block(selected, active, feedback);
+        let block = framed_block(ctx.selected, ctx.active, ctx.feedback);
         let widget = Paragraph::new(display)
             .block(block)
             .alignment(Alignment::Left)
             .style(style);
         Widget::render(widget, area, buf);
-        render_feedback_marker(buf, area, feedback);
+        render_feedback_marker(buf, area, ctx.feedback);
     }
 
     fn handle_key(&mut self, key: Key) -> bool {

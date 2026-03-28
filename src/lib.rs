@@ -11,6 +11,8 @@ pub mod runtime;
 pub mod spec;
 pub mod app;
 
+pub mod theme;
+
 // Prelude stays at top level
 pub mod prelude;
 

@@ -7,6 +7,7 @@ use crate::{
     controls::{AnyControl, BuiltinControl},
     runtime::OperationSource,
 };
+use crate::theme::{LayoutStrategy, Theme};
 use std::collections::{HashMap, HashSet};
 
 /// 使用标题开始定义一个页面。
@@ -32,6 +33,8 @@ pub struct AppSpec {
     /// 延迟构建的页面（标题 + PageSpec），在 into_showcase_app_with_host 中使用 ControlRegistry 物化。
     pending_pages: Vec<(String, crate::schema::PageSpec)>,
     shell_actions: Vec<(String, String)>,
+    theme: Option<Theme>,
+    layout_strategy: Option<Box<dyn LayoutStrategy>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -91,6 +94,8 @@ impl AppSpec {
             screens: Vec::new(),
             pending_pages: Vec::new(),
             shell_actions: Vec::new(),
+            theme: None,
+            layout_strategy: None,
         }
     }
 
@@ -231,6 +236,18 @@ impl AppSpec {
         names
     }
 
+    /// 设置自定义主题。
+    pub fn with_theme(mut self, theme: Theme) -> Self {
+        self.theme = Some(theme);
+        self
+    }
+
+    /// 设置自定义布局策略。
+    pub fn with_layout_strategy(mut self, strategy: impl LayoutStrategy + 'static) -> Self {
+        self.layout_strategy = Some(Box::new(strategy));
+        self
+    }
+
     /// 将应用定义实例化为可运行的应用。
     pub fn into_showcase_app(self) -> ShowcaseApp {
         self.into_showcase_app_with_registry(ActionRegistry::new())
@@ -240,14 +257,21 @@ impl AppSpec {
         for (name, command) in self.shell_actions {
             registry.register_shell_action(name, command);
         }
-        ShowcaseApp::with_registry(
+        let mut app = ShowcaseApp::with_registry(
             ShowcaseCopy {
                 title_text: self.title_text,
                 status_controls: self.status_controls,
             },
             self.screens,
             registry,
-        )
+        );
+        if let Some(theme) = self.theme {
+            app.set_theme(theme);
+        }
+        if let Some(strategy) = self.layout_strategy {
+            app.set_layout_strategy(strategy);
+        }
+        app
     }
 
     pub fn into_showcase_app_with_host(self, mut host: RuntimeHost) -> ShowcaseApp {
@@ -265,14 +289,21 @@ impl AppSpec {
             ));
         }
 
-        ShowcaseApp::with_host(
+        let mut app = ShowcaseApp::with_host(
             ShowcaseCopy {
                 title_text: self.title_text,
                 status_controls: self.status_controls,
             },
             screens,
             host,
-        )
+        );
+        if let Some(theme) = self.theme {
+            app.set_theme(theme);
+        }
+        if let Some(strategy) = self.layout_strategy {
+            app.set_layout_strategy(strategy);
+        }
+        app
     }
 
     pub fn try_into_showcase_app(self) -> Result<ShowcaseApp, AppValidationError> {

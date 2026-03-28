@@ -1,6 +1,7 @@
 //! 控件统一接口定义和反馈状态枚举。
 
 use crate::event::Key;
+use crate::theme::RenderContext;
 use ratatui::{buffer::Buffer, layout::Rect};
 use std::any::Any;
 
@@ -22,10 +23,8 @@ pub trait ControlTrait {
     ///
     /// - `area`: 渲染区域
     /// - `buf`: 目标缓冲区
-    /// - `selected`: 是否被选中（高亮边框）
-    /// - `active`: 是否处于编辑/交互状态
-    /// - `feedback`: 操作反馈状态（运行中、成功、失败等）
-    fn render(&self, area: Rect, buf: &mut Buffer, selected: bool, active: bool, feedback: ControlFeedback);
+    /// - `ctx`: 渲染上下文（主题、选中状态、激活状态、操作反馈）
+    fn render(&self, area: Rect, buf: &mut Buffer, ctx: &RenderContext);
 
     /// 处理按键输入，返回值是否发生变化。
     fn handle_key(&mut self, key: Key) -> bool;

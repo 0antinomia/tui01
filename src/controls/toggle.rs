@@ -7,8 +7,9 @@ use ratatui::{
     style::{Color, Style},
 };
 
-use super::control_trait::{ControlFeedback, ControlTrait};
+use super::control_trait::ControlTrait;
 use super::helpers::{left_aligned_control_rect, render_feedback_marker};
+use crate::theme::RenderContext;
 use std::any::Any;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -104,7 +105,7 @@ fn draw_toggle_track(
 }
 
 impl ControlTrait for ToggleControl {
-    fn render(&self, area: Rect, buf: &mut Buffer, selected: bool, active: bool, feedback: ControlFeedback) {
+    fn render(&self, area: Rect, buf: &mut Buffer, ctx: &RenderContext) {
         let area = left_aligned_control_rect(area, 10);
         if area.width < 10 || area.height == 0 {
             return;
@@ -120,16 +121,16 @@ impl ControlTrait for ToggleControl {
             } else {
                 Color::Rgb(120, 126, 132)
             },
-            if active {
+            if ctx.active {
                 Color::Cyan
-            } else if selected {
+            } else if ctx.selected {
                 Color::White
             } else {
                 Color::Gray
             },
             Color::Rgb(250, 252, 254),
         );
-        render_feedback_marker(buf, area, feedback);
+        render_feedback_marker(buf, area, ctx.feedback);
     }
 
     fn handle_key(&mut self, key: Key) -> bool {

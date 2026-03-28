@@ -8,8 +8,9 @@ use ratatui::{
     widgets::Widget,
 };
 
-use super::control_trait::{ControlFeedback, ControlTrait};
+use super::control_trait::ControlTrait;
 use super::helpers::{framed_block, left_aligned_control_rect, render_feedback_marker, truncate_to_chars};
+use crate::theme::RenderContext;
 use std::any::Any;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,13 +54,13 @@ impl ActionButtonControl {
 }
 
 impl ControlTrait for ActionButtonControl {
-    fn render(&self, area: Rect, buf: &mut Buffer, selected: bool, active: bool, feedback: ControlFeedback) {
+    fn render(&self, area: Rect, buf: &mut Buffer, ctx: &RenderContext) {
         let area = left_aligned_control_rect(area, 16);
         if area.width <= 2 || area.height == 0 {
             return;
         }
 
-        let border = framed_block(selected, active, feedback);
+        let border = framed_block(ctx.selected, ctx.active, ctx.feedback);
         Widget::render(border, area, buf);
 
         let icon = match self.kind {
@@ -80,7 +81,7 @@ impl ControlTrait for ActionButtonControl {
                 _ => Color::White,
             }),
         );
-        render_feedback_marker(buf, area, feedback);
+        render_feedback_marker(buf, area, ctx.feedback);
     }
 
     fn handle_key(&mut self, _key: Key) -> bool {

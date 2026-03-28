@@ -8,6 +8,7 @@ use ratatui::{
 };
 
 use super::Component;
+use crate::theme::{LayoutAreas, LayoutStrategy};
 use ratatui::widgets::BorderType;
 
 /// 四区布局分割比例配置
@@ -79,6 +80,13 @@ impl QuadrantLayout {
             Rect::new(inner_x, bottom_y, left_width, bottom_height),
             Rect::new(right_x, bottom_y, right_width, bottom_height),
         )
+    }
+}
+
+impl LayoutStrategy for QuadrantLayout {
+    fn areas(&self, total: Rect) -> LayoutAreas {
+        let (title, status, menu, content) = self.calculate_quadrants(total);
+        LayoutAreas { title, status, menu, content }
     }
 }
 
@@ -161,6 +169,7 @@ impl Component for QuadrantLayout {
 #[cfg(test)]
 mod tests {
     use super::{QuadrantConfig, QuadrantLayout};
+    use crate::theme::LayoutStrategy;
     use ratatui::layout::Rect;
 
     #[test]
@@ -185,5 +194,17 @@ mod tests {
 
         assert_eq!(config.horizontal_split, 20);
         assert_eq!(config.vertical_split, 20);
+    }
+
+    #[test]
+    fn layout_strategy_returns_same_areas_as_calculate_quadrants() {
+        let layout = QuadrantLayout::new(QuadrantConfig::default());
+        let area = Rect::new(0, 0, 80, 24);
+        let (tl, tr, bl, br) = layout.calculate_quadrants(area);
+        let areas = LayoutStrategy::areas(&layout, area);
+        assert_eq!(areas.title, tl);
+        assert_eq!(areas.status, tr);
+        assert_eq!(areas.menu, bl);
+        assert_eq!(areas.content, br);
     }
 }

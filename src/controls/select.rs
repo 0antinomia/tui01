@@ -7,11 +7,12 @@ use ratatui::{
     style::{Color, Style},
 };
 
-use super::control_trait::{ControlFeedback, ControlTrait};
+use super::control_trait::ControlTrait;
 use super::helpers::{
     feedback_accent, framed_block, left_aligned_control_rect, render_feedback_marker,
     truncate_to_chars,
 };
+use crate::theme::RenderContext;
 use std::any::Any;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -57,16 +58,14 @@ impl SelectControl {
         &self,
         area: Rect,
         buf: &mut Buffer,
-        selected: bool,
-        active: bool,
-        feedback: ControlFeedback,
+        ctx: &RenderContext,
     ) {
         let current = self
             .options
             .get(self.selected)
             .map(|s| s.as_str())
             .unwrap_or("-");
-        let block = framed_block(selected, active, feedback);
+        let block = framed_block(ctx.selected, ctx.active, ctx.feedback);
         ratatui::widgets::Widget::render(block, area, buf);
 
         let inner_y = area.y + area.height.saturating_sub(1) / 2;
@@ -80,10 +79,10 @@ impl SelectControl {
         let arrow_width = 1u16;
         let value_width = inner_width.saturating_sub(arrow_width + 2);
         let value = truncate_to_chars(current, value_width as usize);
-        let value_style = Style::default().fg(if active { Color::Cyan } else { Color::White });
-        let arrow_style = Style::default().fg(if active {
+        let value_style = Style::default().fg(if ctx.active { Color::Cyan } else { Color::White });
+        let arrow_style = Style::default().fg(if ctx.active {
             Color::Cyan
-        } else if selected {
+        } else if ctx.selected {
             Color::White
         } else {
             Color::Gray
@@ -92,17 +91,16 @@ impl SelectControl {
         buf.set_stringn(inner_x, inner_y, &value, value_width as usize, value_style);
         let arrow_x = area.x + area.width.saturating_sub(3);
         buf.set_string(arrow_x, inner_y, arrow, arrow_style);
-        render_feedback_marker(buf, area, feedback);
+        render_feedback_marker(buf, area, ctx.feedback);
     }
 
     fn render_expanded(
         &self,
         area: Rect,
         buf: &mut Buffer,
-        selected: bool,
-        feedback: ControlFeedback,
+        ctx: &RenderContext,
     ) {
-        let border = feedback_accent(feedback, selected, true);
+        let border = feedback_accent(ctx.feedback, ctx.selected, true);
         let base_style = Style::default().fg(Color::Gray);
         let active_style = Style::default().fg(border);
 
@@ -139,21 +137,21 @@ impl SelectControl {
                 buf.set_string(arrow_x, y, "⌄", Style::default().fg(border));
             }
         }
-        render_feedback_marker(buf, area, feedback);
+        render_feedback_marker(buf, area, ctx.feedback);
     }
 }
 
 impl ControlTrait for SelectControl {
-    fn render(&self, area: Rect, buf: &mut Buffer, selected: bool, active: bool, feedback: ControlFeedback) {
+    fn render(&self, area: Rect, buf: &mut Buffer, ctx: &RenderContext) {
         let area = left_aligned_control_rect(area, 22);
         if area.width <= 2 || area.height == 0 {
             return;
         }
 
-        if active && area.height >= 3 {
-            self.render_expanded(area, buf, selected, feedback);
+        if ctx.active && area.height >= 3 {
+            self.render_expanded(area, buf, ctx);
         } else {
-            self.render_collapsed(area, buf, selected, active, feedback);
+            self.render_collapsed(area, buf, ctx);
         }
     }
 

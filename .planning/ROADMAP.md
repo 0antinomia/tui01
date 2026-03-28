@@ -109,7 +109,11 @@ Plans:
   3. RenderContext struct carries Theme and Layout information through the render path, parameterizing ControlTrait render calls
   4. AppSpec builder supports chain-configured Theme and LayoutStrategy
   5. Public API is semantically equivalent to the original but structurally improved; all 87+ tests pass
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [x] 06-01-PLAN.md -- Create Theme/RenderContext/LayoutStrategy types, implement for QuadrantLayout, export via prelude
+- [x] 06-02-PLAN.md -- Change ControlTrait::render signature to use RenderContext, integrate Theme/LayoutStrategy into ShowcaseApp and AppSpec
 
 ## Progress
 
@@ -123,4 +127,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. Custom Control Extension | 2/2 | Complete | 2026-03-28 |
 | 4. Module Hierarchy Restructuring | 2/2 | Complete | 2026-03-28 |
 | 5. Large File Decomposition | 0/3 | Not started | - |
-| 6. Extension Points and Public API | 0/? | Not started | - |
+| 6. Extension Points and Public API | 0/2 | Planned | - |
