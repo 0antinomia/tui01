@@ -1,6 +1,6 @@
 # tui01
 
-`tui01` 是一个基于 `ratatui` 的四分区 TUI 框架，当前版本为 `0.1.0`。
+`tui01` 是一个基于 `ratatui` 的四分区 TUI 框架，当前版本为 `0.2.0`。
 
 tui01 让你能更快地从 0 到 1 搭起一个可运行、可交互、可接入宿主逻辑的 TUI 工具。
 
@@ -31,7 +31,7 @@ cargo run
 推荐按这个顺序接入：
 
 1. 跑通 [examples/host_template.rs](examples/host_template.rs)
-2. 复制 [templates/host_project](templates/host_project) 到你的项目
+2. 复制 `examples/host_template.rs` 的装配方式到你的项目
 3. 在 `src/actions.rs` 里先注册动作
 4. 在 `src/app.rs` 里再写页面
 5. 用 `try_into_showcase_app_with_host(host)` 完成装配
@@ -41,6 +41,33 @@ cargo run
 - `tui01::prelude`
 - `tui01::field`
 - `tui01::host::RuntimeHost`
+
+进阶能力再按需引入：
+
+- `Theme`
+- `LayoutStrategy`
+- `ControlRegistry`
+
+## 项目结构
+
+当前源码按职责拆成几个域模块：
+
+- `spec/`
+  页面、分区、字段的声明式定义
+- `runtime/`
+  页面物化后的运行时数据和状态
+- `controls/`
+  内置控件、自定义控件抽象和统一控件接口
+- `components/`
+  四分区中的菜单、内容区、标题区、状态区等组件
+- `host/`
+  宿主接入、动作注册、执行器、框架日志
+- `app/`
+  应用壳层和主事件流
+- `infra/`
+  终端生命周期与事件采集
+
+对宿主项目来说，通常只需要直接使用 `prelude + field + RuntimeHost`。
 
 ## 最小示例
 
@@ -135,6 +162,21 @@ let mut app = AppSpec::new()
 app.validate_registered_actions()?;
 ```
 
+## 自定义控件
+
+框架现在支持宿主应用注册自定义控件。
+
+使用方式：
+
+1. 在 `RuntimeHost` 上注册控件工厂
+2. 在页面中用 `field::custom("标签", "控件名")` 引用
+
+这适合：
+
+- 业务专用输入控件
+- 自定义展示控件
+- 希望在多个页面复用的交互组件
+
 ## 常用字段
 
 当前已经支持：
@@ -181,6 +223,17 @@ field::action_to_log("同步", "执行", "sync_action", "sync_log")
 - 框架运行日志：由框架自己写文件，可通过 `RuntimeHost` 配置开关和路径
 - 日志控件：只是一个 UI 组件，可以显示任意日志内容，也可以直接读取日志文件
 
+## 主题与布局
+
+框架已经提供两类扩展点：
+
+- `Theme`
+  用于统一边框、文字、选中态、激活态、成功/失败等语义颜色
+- `LayoutStrategy`
+  用于替换默认四分区布局的区域计算逻辑
+
+如果只是直接接入业务页面，这两项不是必需项；只有在你需要统一视觉风格或替换整体布局时再引入。
+
 ## 参数化动作
 
 注册动作支持引用当前字段值。常用写法：
@@ -201,10 +254,22 @@ field::action_to_log("同步", "执行", "sync_action", "sync_log")
 - `result_target` 是否真的指向日志控件
 - `registered_action` 是否已经在宿主应用注册
 
+## 兼容路径
+
+当前仍然保留了一层旧路径兼容别名，例如：
+
+- `tui01::builder`
+- `tui01::schema`
+- `tui01::field`
+- `tui01::showcase`
+- `tui01::event`
+- `tui01::tui`
+
+新项目仍建议优先使用 `prelude`、`field` 和 `RuntimeHost`。
+
 ## 进一步阅读
 
 - [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
-- [templates/host_project/README.md](templates/host_project/README.md)
 - [docs/VERSIONING.md](docs/VERSIONING.md)
 - [docs/RELEASE_SCOPE.md](docs/RELEASE_SCOPE.md)
 - [CHANGELOG.md](CHANGELOG.md)

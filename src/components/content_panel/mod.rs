@@ -363,7 +363,7 @@ mod tests {
             ]),
             ContentSection::new("动作").with_blocks(vec![
                 ContentBlock::refresh_button("刷新列表", "刷新").with_operation_success(700),
-                ContentBlock::static_data("版本", "v0.1.0"),
+                ContentBlock::static_data("版本", "v0.2.0"),
                 ContentBlock::log_output("最近输出", "line one\nline two").with_height_units(2),
             ]),
         ]));

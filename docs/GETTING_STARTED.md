@@ -20,7 +20,7 @@ cargo run
 
 推荐顺序：
 
-1. 复制 [templates/host_project](../templates/host_project)
+1. 先参考并复制 [examples/host_template.rs](../examples/host_template.rs) 的装配方式
 2. 在 `src/host.rs` 里收紧宿主策略
 3. 在 `src/actions.rs` 里注册动作
 4. 在 `src/app.rs` 里定义页面
@@ -46,6 +46,12 @@ your-app/
 - `tui01::field`
 - `RuntimeHost`
 
+只有在这些场景下再额外引入进阶能力：
+
+- 自定义控件：`ControlRegistry` / `register_control()`
+- 主题定制：`Theme`
+- 布局替换：`LayoutStrategy`
+
 推荐启动顺序：
 
 1. 构建 `RuntimeHost`
@@ -53,11 +59,22 @@ your-app/
 3. `try_into_showcase_app_with_host(host)`
 4. 进入事件循环
 
+当前源码结构已经拆成域模块：
+
+- `spec/`
+- `runtime/`
+- `controls/`
+- `components/`
+- `host/`
+- `app/`
+- `infra/`
+
 ## 默认建议
 
 - 动作优先用 `registered_action`
 - 裸 shell 只用于本地快速原型
 - 默认从 `ShellPolicy::RegisteredOnly` 开始
+- 先用内置字段和默认四分区布局，等页面稳定后再考虑自定义控件和主题
 - host 侧至少配置：
   - `project_root` 这类基础 context
   - working dir
@@ -69,6 +86,7 @@ your-app/
 
 - 页面里所有 `result_target` 都存在且指向日志控件
 - 所有 `registered_action` 都已在宿主注册
+- 如果用了 `field::custom(...)`，对应控件已经在 `RuntimeHost` 上注册
 - host policy 不允许未注册 shell
 - host working dir 在白名单内
 - host env key 在白名单内
