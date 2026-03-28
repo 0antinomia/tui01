@@ -1,2 +1,29 @@
+# Build
 /target
+**/*.rs.bk
+*.pdb
+
+# Cargo
+Cargo.lock
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# AI / Dev tools
+.claude/
+.codex/
+.planning/
+
+# Runtime log
 .tui01/
