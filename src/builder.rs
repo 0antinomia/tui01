@@ -5,7 +5,8 @@ use crate::showcase::{ShowcaseApp, ShowcaseCopy, ShowcaseScreen};
 use crate::{
     executor::ActionRegistry,
     host::RuntimeHost,
-    runtime::{ContentControl, OperationSource},
+    components::{AnyControl, BuiltinControl},
+    runtime::OperationSource,
 };
 use std::collections::{HashMap, HashSet};
 
@@ -29,6 +30,8 @@ pub struct AppSpec {
     title_text: String,
     status_controls: String,
     screens: Vec<ShowcaseScreen>,
+    /// 延迟构建的页面（标题 + PageSpec），在 into_showcase_app_with_host 中使用 ControlRegistry 物化。
+    pending_pages: Vec<(String, crate::schema::PageSpec)>,
     shell_actions: Vec<(String, String)>,
 }
 
@@ -87,6 +90,7 @@ impl AppSpec {
             title_text: String::new(),
             status_controls: String::new(),
             screens: Vec::new(),
+            pending_pages: Vec::new(),
             shell_actions: Vec::new(),
         }
     }
@@ -106,6 +110,15 @@ impl AppSpec {
     /// 追加一个页面项。
     pub fn screen(mut self, screen: ShowcaseScreen) -> Self {
         self.screens.push(screen);
+        self
+    }
+
+    /// 添加延迟物化的页面，支持自定义控件。
+    ///
+    /// 与 `screen()` 不同，此方法存储原始 PageSpec，
+    /// 在调用 `into_showcase_app_with_host` 时使用 RuntimeHost 的 ControlRegistry 物化。
+    pub fn page(mut self, title: impl Into<String>, page: crate::schema::PageSpec) -> Self {
+        self.pending_pages.push((title.into(), page));
         self
     }
 
@@ -153,7 +166,7 @@ impl AppSpec {
             for section in &screen.content.sections {
                 for block in &section.blocks {
                     if let Some(id) = &block.id {
-                        let is_log = matches!(block.control, ContentControl::LogOutput(_));
+                        let is_log = matches!(block.control, AnyControl::Builtin(BuiltinControl::LogOutput(_)));
                         if ids.insert(id.clone(), is_log).is_some() {
                             return Err(AppValidationError::DuplicateFieldId(id.clone()));
                         }
@@ -242,12 +255,23 @@ impl AppSpec {
         for (name, command) in self.shell_actions {
             host.register_shell_action(name, command);
         }
+
+        // 物化延迟页面，使用控件注册表
+        let mut screens = self.screens;
+        for (title, page) in self.pending_pages {
+            screens.push(ShowcaseScreen::from_page_with_registry(
+                title,
+                page,
+                Some(host.control_registry()),
+            ));
+        }
+
         ShowcaseApp::with_host(
             ShowcaseCopy {
                 title_text: self.title_text,
                 status_controls: self.status_controls,
             },
-            self.screens,
+            screens,
             host,
         )
     }

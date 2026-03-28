@@ -1,8 +1,8 @@
 //! 与界面渲染解耦的运行时页面状态定义。
 
 use crate::components::{
-    ActionButtonControl, DataDisplayControl, LogOutputControl, NumberInputControl, SelectControl,
-    TextInputControl, ToggleControl,
+    ActionButtonControl, AnyControl, BuiltinControl, DataDisplayControl, LogOutputControl,
+    NumberInputControl, SelectControl, TextInputControl, ToggleControl,
 };
 use std::time::Instant;
 
@@ -50,7 +50,7 @@ impl ContentSection {
 pub struct ContentBlock {
     pub id: Option<String>,
     pub label: String,
-    pub control: ContentControl,
+    pub control: AnyControl,
     pub height_units: u16,
     pub operation: Option<OperationSpec>,
 }
@@ -64,7 +64,7 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: ContentControl::TextInput(TextInputControl::new(value, placeholder)),
+            control: AnyControl::Builtin(BuiltinControl::TextInput(TextInputControl::new(value, placeholder))),
             height_units: 1,
             operation: None,
         }
@@ -78,7 +78,7 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: ContentControl::Select(SelectControl::new(options, selected)),
+            control: AnyControl::Builtin(BuiltinControl::Select(SelectControl::new(options, selected))),
             height_units: 1,
             operation: None,
         }
@@ -88,7 +88,7 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: ContentControl::Toggle(ToggleControl::new(on)),
+            control: AnyControl::Builtin(BuiltinControl::Toggle(ToggleControl::new(on))),
             height_units: 1,
             operation: None,
         }
@@ -102,7 +102,7 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: ContentControl::NumberInput(NumberInputControl::new(value, placeholder)),
+            control: AnyControl::Builtin(BuiltinControl::NumberInput(NumberInputControl::new(value, placeholder))),
             height_units: 1,
             operation: None,
         }
@@ -112,7 +112,7 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: ContentControl::ActionButton(ActionButtonControl::new(button_label)),
+            control: AnyControl::Builtin(BuiltinControl::ActionButton(ActionButtonControl::new(button_label))),
             height_units: 1,
             operation: None,
         }
@@ -122,7 +122,7 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: ContentControl::ActionButton(ActionButtonControl::refresh(button_label)),
+            control: AnyControl::Builtin(BuiltinControl::ActionButton(ActionButtonControl::refresh(button_label))),
             height_units: 1,
             operation: None,
         }
@@ -132,7 +132,7 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: ContentControl::StaticData(DataDisplayControl::new(value)),
+            control: AnyControl::Builtin(BuiltinControl::StaticData(DataDisplayControl::new(value))),
             height_units: 1,
             operation: None,
         }
@@ -142,7 +142,7 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: ContentControl::DynamicData(DataDisplayControl::new(value)),
+            control: AnyControl::Builtin(BuiltinControl::DynamicData(DataDisplayControl::new_dynamic(value))),
             height_units: 1,
             operation: None,
         }
@@ -152,7 +152,7 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: ContentControl::LogOutput(LogOutputControl::new(content)),
+            control: AnyControl::Builtin(BuiltinControl::LogOutput(LogOutputControl::new(content))),
             height_units: 4,
             operation: None,
         }
@@ -165,14 +165,14 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: ContentControl::LogOutput(LogOutputControl::from_file(path)),
+            control: AnyControl::Builtin(BuiltinControl::LogOutput(LogOutputControl::from_file(path))),
             height_units: 4,
             operation: None,
         }
     }
 
     pub fn with_log_tail_lines(mut self, tail_lines: usize) -> Self {
-        if let ContentControl::LogOutput(control) = &mut self.control {
+        if let AnyControl::Builtin(BuiltinControl::LogOutput(control)) = &mut self.control {
             control.set_tail_lines(tail_lines);
         }
         self
@@ -244,18 +244,6 @@ impl ContentBlock {
     pub fn row_height(&self) -> usize {
         self.height_units.max(1) as usize * 3
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ContentControl {
-    TextInput(TextInputControl),
-    NumberInput(NumberInputControl),
-    Select(SelectControl),
-    Toggle(ToggleControl),
-    ActionButton(ActionButtonControl),
-    StaticData(DataDisplayControl),
-    DynamicData(DataDisplayControl),
-    LogOutput(LogOutputControl),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -347,6 +335,9 @@ pub enum RuntimeControl {
         file_source: Option<std::path::PathBuf>,
         tail_lines: Option<usize>,
     },
+    Custom {
+        control_name: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -367,8 +358,8 @@ pub enum OperationStatus {
     Running {
         operation_id: u64,
         started_at: Instant,
-        original_control: ContentControl,
-        pending_control: ContentControl,
+        original_control: AnyControl,
+        pending_control: AnyControl,
     },
     Success,
     Failure,
@@ -376,9 +367,9 @@ pub enum OperationStatus {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuntimeFieldState {
-    pub control: ContentControl,
+    pub control: AnyControl,
     pub status: OperationStatus,
-    pub snapshot: Option<ContentControl>,
+    pub snapshot: Option<AnyControl>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -431,11 +422,21 @@ impl ContentRuntimeState {
 
 impl From<RuntimePage> for ContentBlueprint {
     fn from(value: RuntimePage) -> Self {
+        Self::from_runtime_page(value, None)
+    }
+}
+
+impl ContentBlueprint {
+    /// 从运行时页面和可选的控件注册表创建 ContentBlueprint。
+    pub fn from_runtime_page(
+        value: RuntimePage,
+        registry: Option<&crate::host::ControlRegistry>,
+    ) -> Self {
         ContentBlueprint::new(value.title).with_sections(
             value
                 .sections
                 .into_iter()
-                .map(ContentSection::from)
+                .map(|s| ContentSection::from_runtime_section(s, registry))
                 .collect(),
         )
     }
@@ -443,13 +444,30 @@ impl From<RuntimePage> for ContentBlueprint {
 
 impl From<RuntimeSection> for ContentSection {
     fn from(value: RuntimeSection) -> Self {
-        ContentSection::new(value.title)
-            .with_blocks(value.fields.into_iter().map(ContentBlock::from).collect())
+        Self::from_runtime_section(value, None)
     }
 }
 
-impl From<RuntimeField> for ContentBlock {
-    fn from(value: RuntimeField) -> Self {
+impl ContentSection {
+    /// 从运行时分区和可选的控件注册表创建 ContentSection。
+    pub fn from_runtime_section(
+        value: RuntimeSection,
+        registry: Option<&crate::host::ControlRegistry>,
+    ) -> Self {
+        ContentSection::new(value.title)
+            .with_blocks(value.fields.into_iter().map(|f| ContentBlock::from_runtime_field(f, registry)).collect())
+    }
+}
+
+impl ContentBlock {
+    /// 从运行时字段和可选的控件注册表创建 ContentBlock。
+    ///
+    /// 当 RuntimeControl 为 Custom 时，需要 registry 来查找工厂并创建控件实例。
+    /// 对于内置控件类型，registry 可以为 None。
+    pub fn from_runtime_field(
+        value: RuntimeField,
+        registry: Option<&crate::host::ControlRegistry>,
+    ) -> Self {
         let mut block = match value.control {
             RuntimeControl::TextInput {
                 value: field_value,
@@ -482,9 +500,9 @@ impl From<RuntimeField> for ContentBlock {
             } => {
                 let mut block = ContentBlock::log_output(value.label, content);
                 if let Some(path) = file_source {
-                    block.control = ContentControl::LogOutput(LogOutputControl::from_file(path));
+                    block.control = AnyControl::Builtin(BuiltinControl::LogOutput(LogOutputControl::from_file(path)));
                 }
-                if let ContentControl::LogOutput(control) = &mut block.control {
+                if let AnyControl::Builtin(BuiltinControl::LogOutput(control)) = &mut block.control {
                     if let Some(limit) = tail_lines {
                         control.set_tail_lines(limit);
                         if control.file_source().is_some() {
@@ -493,6 +511,20 @@ impl From<RuntimeField> for ContentBlock {
                     }
                 }
                 block
+            }
+            RuntimeControl::Custom { control_name } => {
+                let control = registry
+                    .and_then(|r| r.create(&control_name))
+                    .unwrap_or_else(|| panic!(
+                        "自定义控件 '{control_name}' 未在 ControlRegistry 中注册。请先调用 RuntimeHost::register_control() 注册。"
+                    ));
+                ContentBlock {
+                    id: None,
+                    label: value.label.clone(),
+                    control: AnyControl::Custom(control),
+                    height_units: 1,
+                    operation: None,
+                }
             }
         };
 
@@ -515,13 +547,21 @@ impl From<RuntimeField> for ContentBlock {
     }
 }
 
+// Keep From impl for backward compatibility (no custom controls):
+impl From<RuntimeField> for ContentBlock {
+    fn from(value: RuntimeField) -> Self {
+        Self::from_runtime_field(value, None)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        ContentBlock, ContentBlueprint, ContentControl, ContentRuntimeState, ContentSection,
+        AnyControl, BuiltinControl, ContentBlock, ContentBlueprint, ContentRuntimeState, ContentSection,
         OperationSource, OperationStatus, RuntimeControl, RuntimeField, RuntimeOperation,
         RuntimePage, RuntimeSection,
     };
+    use crate::components::TextInputControl;
 
     #[test]
     fn runtime_page_converts_to_content_blueprint() {
@@ -552,7 +592,7 @@ mod tests {
             Some("project_name")
         );
         match &blueprint.sections[0].blocks[0].control {
-            ContentControl::TextInput(control) => assert_eq!(control.value, "tui01"),
+            AnyControl::Builtin(BuiltinControl::TextInput(control)) => assert_eq!(control.value, "tui01"),
             _ => panic!("expected text input"),
         }
         assert!(blueprint.sections[0].blocks[0].operation.is_some());
@@ -573,8 +613,21 @@ mod tests {
             OperationStatus::Idle
         ));
         match &state.field_states[0].control {
-            ContentControl::Toggle(control) => assert!(control.on),
+            AnyControl::Builtin(BuiltinControl::Toggle(control)) => assert!(control.on),
             _ => panic!("expected toggle"),
         }
+    }
+
+    #[test]
+    #[should_panic(expected = "自定义控件")]
+    fn custom_control_panics_without_registry() {
+        let field = RuntimeField {
+            id: None,
+            label: "自定义".to_string(),
+            control: RuntimeControl::Custom { control_name: "slider".to_string() },
+            height_units: 1,
+            operation: None,
+        };
+        let _block: ContentBlock = field.into();
     }
 }

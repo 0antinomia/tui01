@@ -9,9 +9,10 @@ mod title_panel;
 
 pub use content_panel::ContentPanel;
 pub use controls::{
-    ActionButtonControl, ActionButtonKind, ControlFeedback, ControlKind, DataDisplayControl,
+    ActionButtonControl, ActionButtonKind, AnyControl, BuiltinControl, ControlFeedback, DataDisplayControl,
     LogOutputControl, NumberInputControl, SelectControl, TextInputControl, ToggleControl,
 };
+pub use controls::ControlTrait;
 pub use menu::{MenuComponent, MenuItem, MenuState};
 pub use quadrant::{QuadrantConfig, QuadrantLayout};
 pub use status_panel::StatusPanel;

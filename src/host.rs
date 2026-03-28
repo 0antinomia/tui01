@@ -1,5 +1,6 @@
 //! 宿主侧运行时接入面。
 
+use crate::components::ControlTrait;
 use crate::executor::{ActionContext, ActionOutcome, ActionRegistry};
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
@@ -113,9 +114,44 @@ impl ShellRuntime {
     }
 }
 
+/// 自定义控件工厂闭包类型，使用 Arc 包装以支持 Clone。
+pub type ControlFactory = Arc<dyn Fn() -> Box<dyn ControlTrait> + Send + Sync>;
+
+/// 自定义控件注册表，通过字符串名称映射到控件工厂闭包。
+///
+/// 宿主应用通过 `RuntimeHost::register_control()` 注册自定义控件类型。
+/// 注册表存储工厂闭包，在 materialization 时创建控件实例。
+#[derive(Default, Clone)]
+pub struct ControlRegistry {
+    factories: HashMap<String, ControlFactory>,
+}
+
+impl ControlRegistry {
+    /// 创建空的控件注册表。
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// 注册一个自定义控件工厂。
+    pub fn register(&mut self, name: impl Into<String>, factory: ControlFactory) {
+        self.factories.insert(name.into(), factory);
+    }
+
+    /// 通过名称创建控件实例。
+    pub fn create(&self, name: &str) -> Option<Box<dyn ControlTrait>> {
+        self.factories.get(name).map(|f| f())
+    }
+
+    /// 检查指定名称的控件是否已注册。
+    pub fn has_control(&self, name: &str) -> bool {
+        self.factories.contains_key(name)
+    }
+}
+
 #[derive(Clone, Default)]
 pub struct RuntimeHost {
     actions: ActionRegistry,
+    control_registry: ControlRegistry,
     context: HashMap<String, String>,
     shell: ShellRuntime,
     shell_policy: ShellPolicy,
@@ -134,6 +170,7 @@ impl RuntimeHost {
     pub fn with_registry(actions: ActionRegistry) -> Self {
         Self {
             actions,
+            control_registry: ControlRegistry::new(),
             context: HashMap::new(),
             shell: ShellRuntime::new(),
             shell_policy: ShellPolicy::AllowAll,
@@ -163,6 +200,20 @@ impl RuntimeHost {
 
     pub fn has_action(&self, name: &str) -> bool {
         self.actions.has_action(name)
+    }
+
+    /// 注册自定义控件工厂。
+    pub fn register_control(
+        &mut self,
+        name: impl Into<String>,
+        factory: impl Fn() -> Box<dyn ControlTrait> + Send + Sync + 'static,
+    ) {
+        self.control_registry.register(name.into(), Arc::new(factory));
+    }
+
+    /// 获取控件注册表的引用。
+    pub fn control_registry(&self) -> &ControlRegistry {
+        &self.control_registry
     }
 
     pub fn set_context(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
@@ -391,5 +442,21 @@ mod tests {
             .allowed_env_keys()
             .unwrap()
             .contains("APP_MODE"));
+    }
+
+    #[test]
+    fn control_registry_registers_and_creates() {
+        use crate::components::ControlTrait;
+        use crate::components::TextInputControl;
+
+        let mut host = RuntimeHost::new();
+        host.register_control("my_text", || {
+            Box::new(TextInputControl::new("initial", "placeholder"))
+        });
+        assert!(host.control_registry().has_control("my_text"));
+        assert!(!host.control_registry().has_control("nonexistent"));
+
+        let control = host.control_registry().create("my_text").unwrap();
+        assert_eq!(control.value(), "initial");
     }
 }

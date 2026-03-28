@@ -61,6 +61,18 @@ impl ShowcaseScreen {
             content: page.materialize().into(),
         }
     }
+
+    /// 从页面规格和控件注册表创建 ShowcaseScreen，支持自定义控件。
+    pub fn from_page_with_registry(
+        title: impl Into<String>,
+        page: PageSpec,
+        registry: Option<&crate::host::ControlRegistry>,
+    ) -> Self {
+        Self {
+            title: title.into(),
+            content: ContentBlueprint::from_runtime_page(page.materialize(), registry),
+        }
+    }
 }
 
 pub struct ShowcaseCopy {
@@ -555,7 +567,8 @@ fn framework_logger_for_host(host: &RuntimeHost) -> FrameworkLogger {
 mod tests {
     use super::{FocusTarget, ShowcaseApp, ShowcaseCopy, ShowcaseScreen};
     use crate::event::{Event, Key};
-    use crate::runtime::{ContentBlock, ContentBlueprint, ContentControl, ContentSection};
+    use crate::components::{AnyControl, BuiltinControl};
+    use crate::runtime::{ContentBlock, ContentBlueprint, ContentSection};
     fn screen(title: &'static str, text: &'static str) -> ShowcaseScreen {
         ShowcaseScreen {
             title: title.to_string(),
@@ -652,7 +665,7 @@ mod tests {
         app.sync_panels();
 
         match &app.content_panel.blueprint().sections[0].blocks[0].control {
-            ContentControl::Toggle(control) => {
+            AnyControl::Builtin(BuiltinControl::Toggle(control)) => {
                 assert!(control.on)
             }
             _ => panic!("expected toggle"),
@@ -714,7 +727,7 @@ mod tests {
         app.handle_event(Event::Key(Key::Char('l')));
         assert!(!app.content_panel.is_control_active());
         match &app.content_panel.blueprint().sections[0].blocks[0].control {
-            ContentControl::Select(control) => assert_eq!(control.selected, 0),
+            AnyControl::Builtin(BuiltinControl::Select(control)) => assert_eq!(control.selected, 0),
             _ => panic!("expected select"),
         }
     }
@@ -741,7 +754,7 @@ mod tests {
         app.handle_event(Event::Key(Key::Char('h')));
         assert!(app.content_panel.is_control_active());
         match &app.content_panel.blueprint().sections[0].blocks[0].control {
-            ContentControl::TextInput(control) => {
+            AnyControl::Builtin(BuiltinControl::TextInput(control)) => {
                 assert_eq!(control.value, "h")
             }
             _ => panic!("expected text input"),

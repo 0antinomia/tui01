@@ -217,6 +217,19 @@ impl FieldSpec {
         }
     }
 
+    /// 自定义控件字段，通过控件名称引用宿主应用注册的控件工厂。
+    pub fn custom(label: impl Into<String>, control_name: impl Into<String>) -> Self {
+        Self {
+            id: None,
+            label: label.into(),
+            control: ControlSpec::Custom {
+                control_name: control_name.into(),
+            },
+            height_units: 1,
+            operation: None,
+        }
+    }
+
     /// 由磁盘文件驱动的只读日志输出字段。
     pub fn log_output_from_file(
         label: impl Into<String>,
@@ -349,6 +362,9 @@ impl FieldSpec {
                     file_source: file_source.clone(),
                     tail_lines: *tail_lines,
                 },
+                ControlSpec::Custom { control_name } => RuntimeControl::Custom {
+                    control_name: control_name.clone(),
+                },
             },
             height_units: self.height_units,
             operation: self.operation.clone().map(|operation| RuntimeOperation {
@@ -392,6 +408,9 @@ enum ControlSpec {
         content: String,
         file_source: Option<std::path::PathBuf>,
         tail_lines: Option<usize>,
+    },
+    Custom {
+        control_name: String,
     },
 }
 

@@ -131,9 +131,14 @@ pub fn log_file_tail(
     log_file(label, path).with_log_tail_lines(tail_lines)
 }
 
+/// 自定义控件字段，通过控件名称引用在 RuntimeHost 上注册的控件工厂。
+pub fn custom(label: impl Into<String>, control_name: impl Into<String>) -> FieldSpec {
+    FieldSpec::custom(label, control_name)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{action_registered_to_log, log_file_tail, number_id, text_id};
+    use super::{action_registered_to_log, custom, log_file_tail, number_id, text_id};
 
     #[test]
     fn text_and_number_id_helpers_apply_ids() {
@@ -164,5 +169,12 @@ mod tests {
 
         assert!(debug.contains("framework.log"));
         assert!(debug.contains("tail_lines: Some(20)"));
+    }
+
+    #[test]
+    fn custom_factory_creates_field_with_control_name() {
+        let field = custom("滑块", "slider");
+        let debug = format!("{field:?}");
+        assert!(debug.contains("slider"));
     }
 }

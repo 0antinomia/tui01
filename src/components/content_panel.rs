@@ -1,13 +1,12 @@
 //! 右下内容区域组件
 
-use crate::components::{Component, ControlFeedback, ControlKind};
+use crate::components::{AnyControl, BuiltinControl, Component, ControlFeedback};
 use crate::event::Key;
 use crate::executor::{
     OperationRequest, OperationResult, OperationSource as ExecutorOperationSource,
 };
 use crate::runtime::{
-    ContentBlock, ContentBlueprint, ContentControl, ContentRuntimeState, OperationSource,
-    OperationStatus,
+    ContentBlock, ContentBlueprint, ContentRuntimeState, OperationSource, OperationStatus,
 };
 use ratatui::{
     layout::Rect,
@@ -19,70 +18,22 @@ use std::collections::HashMap;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 fn render_control(
-    control: &ContentControl,
+    control: &AnyControl,
     area: Rect,
     buf: &mut ratatui::buffer::Buffer,
     selected: bool,
     active: bool,
     feedback: ControlFeedback,
 ) {
-    match control {
-        ContentControl::TextInput(control) => {
-            ControlKind::TextInput(control.clone()).render(area, buf, selected, active, feedback)
-        }
-        ContentControl::NumberInput(control) => {
-            ControlKind::NumberInput(control.clone()).render(area, buf, selected, active, feedback)
-        }
-        ContentControl::Select(control) => {
-            ControlKind::Select(control.clone()).render(area, buf, selected, active, feedback)
-        }
-        ContentControl::Toggle(control) => {
-            ControlKind::Toggle(control.clone()).render(area, buf, selected, active, feedback)
-        }
-        ContentControl::ActionButton(control) => {
-            ControlKind::ActionButton(control.clone()).render(area, buf, selected, active, feedback)
-        }
-        ContentControl::StaticData(control) => {
-            ControlKind::StaticData(control.clone()).render(area, buf, selected, active, feedback)
-        }
-        ContentControl::DynamicData(control) => {
-            ControlKind::DynamicData(control.clone()).render(area, buf, selected, active, feedback)
-        }
-        ContentControl::LogOutput(control) => {
-            ControlKind::LogOutput(control.clone()).render(area, buf, selected, active, feedback)
-        }
-    }
+    control.render(area, buf, selected, active, feedback)
 }
 
-fn handle_control_key(control: &mut ContentControl, key: Key) -> bool {
-    match control {
-        ContentControl::TextInput(control) => control.handle_key(key),
-        ContentControl::NumberInput(control) => control.handle_key(key),
-        ContentControl::Select(control) => control.handle_key(key),
-        ContentControl::Toggle(control) => control.handle_key(key),
-        ContentControl::ActionButton(control) => control.handle_key(key),
-        ContentControl::StaticData(_)
-        | ContentControl::DynamicData(_)
-        | ContentControl::LogOutput(_) => false,
-    }
+fn handle_control_key(control: &mut AnyControl, key: Key) -> bool {
+    control.handle_key(key)
 }
 
-fn control_value(control: &ContentControl) -> String {
-    match control {
-        ContentControl::TextInput(control) => control.value.clone(),
-        ContentControl::NumberInput(control) => control.value.clone(),
-        ContentControl::Select(control) => control
-            .options
-            .get(control.selected)
-            .cloned()
-            .unwrap_or_default(),
-        ContentControl::Toggle(control) => control.on.to_string(),
-        ContentControl::ActionButton(control) => control.label.clone(),
-        ContentControl::StaticData(control) | ContentControl::DynamicData(control) => {
-            control.value.clone()
-        }
-        ContentControl::LogOutput(control) => control.content.clone(),
-    }
+fn control_value(control: &AnyControl) -> String {
+    control.value()
 }
 
 fn scope_slug(value: &str) -> String {
@@ -124,6 +75,7 @@ enum SelectedControlKind {
     StaticData,
     DynamicData,
     LogOutput,
+    Custom,
 }
 
 impl VisibleBlock {
@@ -222,7 +174,7 @@ impl ContentPanel {
 
     fn refresh_file_logs(&mut self) {
         for state in &mut self.runtime.field_states {
-            if let ContentControl::LogOutput(control) = &mut state.control {
+            if let AnyControl::Builtin(BuiltinControl::LogOutput(control)) = &mut state.control {
                 if control.file_source().is_some() {
                     control.refresh_from_file();
                 }
@@ -281,6 +233,28 @@ impl ContentPanel {
                 self.start_selected_action(operation_id, screen_index)
             }
             Some(SelectedControlKind::StaticData | SelectedControlKind::DynamicData) | None => None,
+            Some(SelectedControlKind::Custom) => {
+                let is_editable = self.selected_block_control_mut()
+                    .map(|c| c.is_editable())
+                    .unwrap_or(false);
+                let triggers = self.selected_block_control_mut()
+                    .map(|c| c.triggers_on_activate())
+                    .unwrap_or(false);
+
+                if triggers {
+                    self.control_active = false;
+                    self.clear_selected_snapshot();
+                    self.start_selected_action(operation_id, screen_index)
+                } else if is_editable {
+                    if let Some(state) = self.selected_block_state_mut() {
+                        state.snapshot = Some(state.control.clone());
+                    }
+                    self.control_active = true;
+                    None
+                } else {
+                    None
+                }
+            }
         }
     }
 
@@ -609,15 +583,15 @@ impl ContentPanel {
             .unwrap_or(false)
     }
 
-    fn block_control(&self, index: usize) -> Option<&ContentControl> {
+    fn block_control(&self, index: usize) -> Option<&AnyControl> {
         self.block_state(index).map(|state| &state.control)
     }
 
-    fn block_control_mut(&mut self, index: usize) -> Option<&mut ContentControl> {
+    fn block_control_mut(&mut self, index: usize) -> Option<&mut AnyControl> {
         self.block_state_mut(index).map(|state| &mut state.control)
     }
 
-    fn selected_block_control_mut(&mut self) -> Option<&mut ContentControl> {
+    fn selected_block_control_mut(&mut self) -> Option<&mut AnyControl> {
         self.block_control_mut(self.runtime.selected_block)
     }
 
@@ -626,8 +600,8 @@ impl ContentPanel {
         operation_id: u64,
         screen_index: usize,
         block_index: usize,
-        original_control: ContentControl,
-        pending_control: ContentControl,
+        original_control: AnyControl,
+        pending_control: AnyControl,
     ) -> Option<OperationRequest> {
         let command = self.block_mut_by_index(block_index)?.operation.clone()?;
         let state = self.block_state_mut(block_index)?;
@@ -755,7 +729,7 @@ impl ContentPanel {
         None
     }
 
-    fn block_control_mut_by_id(&mut self, target_id: &str) -> Option<&mut ContentControl> {
+    fn block_control_mut_by_id(&mut self, target_id: &str) -> Option<&mut AnyControl> {
         let index = self.block_index_by_id(target_id)?;
         self.block_control_mut(index)
     }
@@ -764,7 +738,7 @@ impl ContentPanel {
         self.apply_operation_result_to_block(result.block_index, result);
 
         if let Some(target_id) = result.result_target.as_deref() {
-            if let Some(ContentControl::LogOutput(log)) = self.block_control_mut_by_id(target_id) {
+            if let Some(AnyControl::Builtin(BuiltinControl::LogOutput(log))) = self.block_control_mut_by_id(target_id) {
                 log.append_entry(Self::format_result_output(result));
             }
         }
@@ -800,14 +774,15 @@ impl ContentPanel {
     fn selected_control_kind(&self) -> Option<SelectedControlKind> {
         self.block_control(self.runtime.selected_block)
             .map(|control| match control {
-                ContentControl::TextInput(_) => SelectedControlKind::TextInput,
-                ContentControl::NumberInput(_) => SelectedControlKind::NumberInput,
-                ContentControl::Select(_) => SelectedControlKind::Select,
-                ContentControl::Toggle(_) => SelectedControlKind::Toggle,
-                ContentControl::ActionButton(_) => SelectedControlKind::ActionButton,
-                ContentControl::StaticData(_) => SelectedControlKind::StaticData,
-                ContentControl::DynamicData(_) => SelectedControlKind::DynamicData,
-                ContentControl::LogOutput(_) => SelectedControlKind::LogOutput,
+                AnyControl::Builtin(BuiltinControl::TextInput(_)) => SelectedControlKind::TextInput,
+                AnyControl::Builtin(BuiltinControl::NumberInput(_)) => SelectedControlKind::NumberInput,
+                AnyControl::Builtin(BuiltinControl::Select(_)) => SelectedControlKind::Select,
+                AnyControl::Builtin(BuiltinControl::Toggle(_)) => SelectedControlKind::Toggle,
+                AnyControl::Builtin(BuiltinControl::ActionButton(_)) => SelectedControlKind::ActionButton,
+                AnyControl::Builtin(BuiltinControl::StaticData(_)) => SelectedControlKind::StaticData,
+                AnyControl::Builtin(BuiltinControl::DynamicData(_)) => SelectedControlKind::DynamicData,
+                AnyControl::Builtin(BuiltinControl::LogOutput(_)) => SelectedControlKind::LogOutput,
+                AnyControl::Custom(_) => SelectedControlKind::Custom,
             })
     }
 
@@ -1319,7 +1294,7 @@ mod tests {
         assert!(panel.handle_control_key(crate::event::Key::Char('x')));
 
         match &panel.blueprint().sections[0].blocks[0].control {
-            super::ContentControl::TextInput(control) => assert_eq!(control.value, "demox"),
+            super::AnyControl::Builtin(super::BuiltinControl::TextInput(control)) => assert_eq!(control.value, "demox"),
             _ => panic!("expected text input"),
         }
     }
@@ -1333,7 +1308,7 @@ mod tests {
         assert!(!panel.is_control_active());
 
         match &panel.blueprint().sections[0].blocks[1].control {
-            super::ContentControl::Toggle(control) => assert!(!control.on),
+            super::AnyControl::Builtin(super::BuiltinControl::Toggle(control)) => assert!(!control.on),
             _ => panic!("expected toggle"),
         }
     }
@@ -1350,7 +1325,7 @@ mod tests {
         assert!(!panel.handle_control_key(crate::event::Key::Char('x')));
 
         match &panel.blueprint().sections[1].blocks[1].control {
-            super::ContentControl::NumberInput(control) => assert_eq!(control.value, "80809"),
+            super::AnyControl::Builtin(super::BuiltinControl::NumberInput(control)) => assert_eq!(control.value, "80809"),
             _ => panic!("expected number input"),
         }
     }
@@ -1366,7 +1341,7 @@ mod tests {
         panel.cancel_control();
 
         match &panel.blueprint().sections[1].blocks[0].control {
-            super::ContentControl::Select(control) => assert_eq!(control.selected, 0),
+            super::AnyControl::Builtin(super::BuiltinControl::Select(control)) => assert_eq!(control.selected, 0),
             _ => panic!("expected select"),
         }
         assert!(!panel.is_control_active());
@@ -1441,7 +1416,7 @@ mod tests {
         });
 
         match &panel.blueprint().sections[0].blocks[1].control {
-            super::ContentControl::LogOutput(log) => assert!(log.content.contains("done")),
+            super::AnyControl::Builtin(super::BuiltinControl::LogOutput(log)) => assert!(log.content.contains("done")),
             _ => panic!("expected log output"),
         }
     }
@@ -1470,7 +1445,7 @@ mod tests {
         });
 
         match &panel.blueprint().sections[0].blocks[1].control {
-            super::ContentControl::LogOutput(log) => {
+            super::AnyControl::Builtin(super::BuiltinControl::LogOutput(log)) => {
                 assert!(log.content.contains("previous line"));
                 assert!(log.content.contains("[success]"));
                 assert!(log.content.contains("done"));
