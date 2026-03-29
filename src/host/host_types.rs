@@ -1,4 +1,4 @@
-//! 宿主侧运行时接入面。
+//! 宿主侧运行时接入边界。
 
 use super::executor::{ActionContext, ActionOutcome, ActionRegistry};
 use crate::controls::ControlTrait;

@@ -1,8 +1,6 @@
-use tui01::event::EventHandler;
 use tui01::field;
 use tui01::host::ActionOutcome;
 use tui01::prelude::{AppSpec, HostLogLevel, RuntimeHost, ShellPolicy, page, screen, section};
-use tui01::tui;
 
 fn build_host() -> RuntimeHost {
     let mut host = RuntimeHost::new();
@@ -38,10 +36,9 @@ fn build_host() -> RuntimeHost {
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
-    tui::init_panic_hook();
 
     let host = build_host();
-    let mut app = AppSpec::new()
+    AppSpec::new()
         .title_text("Host Template\n\nRust-native host integration example.")
         .status_controls(
             "Controls:\n↑/↓ 或 j/k 当前焦点内移动\nShift+J/K 当前焦点区域翻页\nEnter / l 进入或确认\nEsc / h 返回\nq 退出",
@@ -77,23 +74,5 @@ async fn main() -> color_eyre::Result<()> {
         ))
         .try_into_showcase_app_with_host(host)
         .map_err(|err| color_eyre::eyre::eyre!("invalid app spec: {}", err))?;
-
-    if let Err(msg) = tui::check_minimum_size() {
-        eprintln!("{}", msg);
-        return Ok(());
-    }
-
-    let mut tui = tui::Tui::new()?;
-    let mut event_handler = EventHandler::new();
-
-    while app.running {
-        tui.draw(|f| app.render(f))?;
-
-        if let Some(event) = event_handler.next().await {
-            app.handle_event(event);
-        }
-    }
-
-    tui.exit()?;
     Ok(())
 }

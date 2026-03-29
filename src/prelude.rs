@@ -1,4 +1,4 @@
-//! 推荐给宿主应用使用的公开导入集合。
+//! Canonical host-integration import bundle.
 
 pub use crate::spec::builder::{AppSpec, AppValidationError, page, screen, section};
 pub use crate::field;
