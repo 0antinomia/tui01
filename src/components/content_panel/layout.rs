@@ -41,10 +41,7 @@ pub(super) fn layout_pages(panel: &ContentPanel, height: u16) -> Vec<ContentPage
     let mut pages = Vec::new();
 
     if panel.blueprint.sections.is_empty() {
-        return vec![ContentPage {
-            subtitle: panel.blueprint.title.clone(),
-            blocks: Vec::new(),
-        }];
+        return vec![ContentPage { subtitle: panel.blueprint.title.clone(), blocks: Vec::new() }];
     }
     let mut global_index = 0usize;
     let available_height = page_height.max(1);
@@ -57,17 +54,11 @@ pub(super) fn layout_pages(panel: &ContentPanel, height: u16) -> Vec<ContentPage
         };
 
         if section.blocks.is_empty() {
-            pages.push(ContentPage {
-                subtitle,
-                blocks: Vec::new(),
-            });
+            pages.push(ContentPage { subtitle, blocks: Vec::new() });
             continue;
         }
 
-        let mut current_page = ContentPage {
-            subtitle: subtitle.clone(),
-            blocks: Vec::new(),
-        };
+        let mut current_page = ContentPage { subtitle: subtitle.clone(), blocks: Vec::new() };
         let mut remaining = available_height.max(1);
 
         for block in &section.blocks {
@@ -77,17 +68,11 @@ pub(super) fn layout_pages(panel: &ContentPanel, height: u16) -> Vec<ContentPage
 
             if !fits_current && has_blocks {
                 pages.push(current_page);
-                current_page = ContentPage {
-                    subtitle: subtitle.clone(),
-                    blocks: Vec::new(),
-                };
+                current_page = ContentPage { subtitle: subtitle.clone(), blocks: Vec::new() };
                 remaining = available_height.max(1);
             }
 
-            current_page.blocks.push(VisibleBlock {
-                index: global_index,
-                block: block.clone(),
-            });
+            current_page.blocks.push(VisibleBlock { index: global_index, block: block.clone() });
             global_index += 1;
 
             let consumed = block_height.min(remaining.max(1));
@@ -95,10 +80,7 @@ pub(super) fn layout_pages(panel: &ContentPanel, height: u16) -> Vec<ContentPage
 
             if remaining == 0 {
                 pages.push(current_page);
-                current_page = ContentPage {
-                    subtitle: subtitle.clone(),
-                    blocks: Vec::new(),
-                };
+                current_page = ContentPage { subtitle: subtitle.clone(), blocks: Vec::new() };
                 remaining = available_height.max(1);
             }
         }
@@ -111,7 +93,11 @@ pub(super) fn layout_pages(panel: &ContentPanel, height: u16) -> Vec<ContentPage
     pages
 }
 
-pub(super) fn current_page_body(panel: &ContentPanel, _width: u16, height: u16) -> Option<ContentPage> {
+pub(super) fn current_page_body(
+    panel: &ContentPanel,
+    _width: u16,
+    height: u16,
+) -> Option<ContentPage> {
     let pages = layout_pages(panel, effective_height(panel, height));
     let page_index = panel.runtime.current_page.min(pages.len().saturating_sub(1));
     pages.get(page_index).cloned()
@@ -149,13 +135,21 @@ pub(super) fn page_label(panel: &ContentPanel, height: u16, page: usize) -> Stri
         .unwrap_or_else(|| panel.blueprint.title.clone())
 }
 
-pub(super) fn truncated_page_label(panel: &ContentPanel, height: u16, page: usize, max_width: usize) -> String {
+pub(super) fn truncated_page_label(
+    panel: &ContentPanel,
+    height: u16,
+    page: usize,
+    max_width: usize,
+) -> String {
     let label = page_label(panel, height, page);
     let max_width = max_width.min(ContentPanel::PAGE_LABEL_MAX_CHARS);
     truncate_chars(&label, max_width)
 }
 
-pub(super) fn pagination_rows(panel: &ContentPanel, height: u16) -> Vec<(char, Color, Option<String>)> {
+pub(super) fn pagination_rows(
+    panel: &ContentPanel,
+    height: u16,
+) -> Vec<(char, Color, Option<String>)> {
     let height = effective_height(panel, height);
     if height == 0 {
         return Vec::new();
@@ -195,11 +189,7 @@ pub(super) fn pagination_rows(panel: &ContentPanel, height: u16) -> Vec<(char, C
         let row_start = local_page * ContentPanel::PAGE_SLOT_HEIGHT as usize;
         let row_mid = row_start + 1;
         let row_end = row_start + ContentPanel::PAGE_SLOT_HEIGHT as usize;
-        let glyph = if page == current_page {
-            active.clone()
-        } else {
-            inactive.clone()
-        };
+        let glyph = if page == current_page { active.clone() } else { inactive.clone() };
 
         for row in rows.iter_mut().take(row_end.min(slots)).skip(row_start) {
             *row = glyph.clone();

@@ -1,27 +1,16 @@
 use tui01::event::EventHandler;
-use tui01::host::ActionOutcome;
 use tui01::field;
-use tui01::prelude::{page, screen, section, AppSpec, HostLogLevel, RuntimeHost, ShellPolicy};
+use tui01::host::ActionOutcome;
+use tui01::prelude::{AppSpec, HostLogLevel, RuntimeHost, ShellPolicy, page, screen, section};
 use tui01::tui;
 
 fn build_host() -> RuntimeHost {
     let mut host = RuntimeHost::new();
     host.register_action_handler("sync_workspace", |context| async move {
-        let project = context
-            .params
-            .get("project_name")
-            .cloned()
-            .unwrap_or_else(|| "unknown".to_string());
-        let port = context
-            .params
-            .get("server_port")
-            .cloned()
-            .unwrap_or_else(|| "0".to_string());
-        let root = context
-            .host
-            .get("project_root")
-            .cloned()
-            .unwrap_or_else(|| ".".to_string());
+        let project =
+            context.params.get("project_name").cloned().unwrap_or_else(|| "unknown".to_string());
+        let port = context.params.get("server_port").cloned().unwrap_or_else(|| "0".to_string());
+        let root = context.host.get("project_root").cloned().unwrap_or_else(|| ".".to_string());
 
         ActionOutcome::success(format!("synced project={project} port={port} root={root}"))
     });
@@ -43,9 +32,7 @@ fn build_host() -> RuntimeHost {
         eprintln!("[event] {event:?}");
     });
 
-    host.set_working_dir(".")
-        .allow_working_dir(".")
-        .allow_env_key("APP_ENV")
+    host.set_working_dir(".").allow_working_dir(".").allow_env_key("APP_ENV")
 }
 
 #[tokio::main]

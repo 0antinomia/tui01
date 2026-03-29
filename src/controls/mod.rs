@@ -49,12 +49,7 @@ impl BuiltinControl {
         }
     }
 
-    pub fn render(
-        &self,
-        area: Rect,
-        buf: &mut Buffer,
-        ctx: &RenderContext,
-    ) {
+    pub fn render(&self, area: Rect, buf: &mut Buffer, ctx: &RenderContext) {
         match self {
             Self::TextInput(c) => c.render(area, buf, ctx),
             Self::NumberInput(c) => c.render(area, buf, ctx),
@@ -221,14 +216,20 @@ mod tests {
 
     #[test]
     fn any_control_builtin_clone_and_eq() {
-        let original = AnyControl::Builtin(BuiltinControl::TextInput(TextInputControl::new("hello", "placeholder")));
+        let original = AnyControl::Builtin(BuiltinControl::TextInput(TextInputControl::new(
+            "hello",
+            "placeholder",
+        )));
         let cloned = original.clone();
         assert_eq!(original, cloned);
     }
 
     #[test]
     fn any_control_builtin_and_custom_are_not_equal() {
-        let builtin = AnyControl::Builtin(BuiltinControl::TextInput(TextInputControl::new("hello", "placeholder")));
+        let builtin = AnyControl::Builtin(BuiltinControl::TextInput(TextInputControl::new(
+            "hello",
+            "placeholder",
+        )));
         let custom = AnyControl::Custom(Box::new(TextInputControl::new("hello", "placeholder")));
         assert_ne!(builtin, custom);
     }

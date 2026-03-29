@@ -2,7 +2,9 @@
 
 use super::registry::{ActionRegistry, RegisteredAction};
 use super::shell;
-use super::types::{ActionContext, ActionOutcome, OperationRequest, OperationResult, OperationSource};
+use super::types::{
+    ActionContext, ActionOutcome, OperationRequest, OperationResult, OperationSource,
+};
 use crate::host::framework_log::FrameworkLogger;
 use crate::host::host_types::{HostEvent, HostLogLevel, HostLogRecord, ShellPolicy};
 use std::future::Future;
@@ -25,13 +27,7 @@ impl OperationExecutor {
     }
 
     pub fn with_registry(registry: ActionRegistry) -> Self {
-        Self::with_runtime(
-            registry,
-            ShellPolicy::AllowAll,
-            None,
-            None,
-            FrameworkLogger::fallback(),
-        )
+        Self::with_runtime(registry, ShellPolicy::AllowAll, None, None, FrameworkLogger::fallback())
     }
 
     pub fn with_runtime(
@@ -42,15 +38,7 @@ impl OperationExecutor {
         framework_logger: FrameworkLogger,
     ) -> Self {
         let (sender, receiver) = mpsc::unbounded_channel();
-        Self {
-            registry,
-            shell_policy,
-            event_hook,
-            logger,
-            framework_logger,
-            sender,
-            receiver,
-        }
+        Self { registry, shell_policy, event_hook, logger, framework_logger, sender, receiver }
     }
 
     pub fn register_shell_action(&mut self, name: impl Into<String>, command: impl Into<String>) {
@@ -169,8 +157,12 @@ impl OperationExecutor {
                     ActionOutcome::failure("inline shell commands are disabled by host policy")
                 }
                 OperationSource::ShellCommand(command) => {
-                    shell::run_shell_command(command.clone(), request.cwd.clone(), request.env.clone())
-                        .await
+                    shell::run_shell_command(
+                        command.clone(),
+                        request.cwd.clone(),
+                        request.env.clone(),
+                    )
+                    .await
                 }
                 OperationSource::RegisteredAction(name) => match registered {
                     Some(RegisteredAction::ShellTemplate(_))
@@ -193,9 +185,13 @@ impl OperationExecutor {
                         )
                     }
                     Some(RegisteredAction::ShellTemplate(template)) => {
-                        let command =
-                            shell::render_command_template(&template, &request.params, &request.host);
-                        shell::run_shell_command(command, request.cwd.clone(), request.env.clone()).await
+                        let command = shell::render_command_template(
+                            &template,
+                            &request.params,
+                            &request.host,
+                        );
+                        shell::run_shell_command(command, request.cwd.clone(), request.env.clone())
+                            .await
                     }
                     Some(RegisteredAction::Handler(handler)) => handler(context).await,
                     None => ActionOutcome::failure(format!("unknown action: {name}")),
@@ -224,11 +220,7 @@ impl OperationExecutor {
                 });
             }
             let finish_record = HostLogRecord {
-                level: if result.success {
-                    HostLogLevel::Info
-                } else {
-                    HostLogLevel::Error
-                },
+                level: if result.success { HostLogLevel::Info } else { HostLogLevel::Error },
                 target: "tui01.operation".to_string(),
                 message: format!(
                     "finished op={} screen={} block={} source={} success={}",

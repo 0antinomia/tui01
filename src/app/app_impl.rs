@@ -1,8 +1,8 @@
 //! App 结构体 - 默认入口的主应用状态
 
-use crate::spec::field;
-use crate::prelude::{page, screen, section, AppSpec};
 use super::showcase::ShowcaseApp;
+use crate::prelude::{AppSpec, page, screen, section};
+use crate::spec::field;
 
 pub struct App {
     inner: ShowcaseApp,

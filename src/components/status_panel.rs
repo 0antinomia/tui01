@@ -2,10 +2,10 @@
 
 use crate::components::Component;
 use ratatui::{
+    Frame,
     layout::Rect,
     style::{Color, Style},
     widgets::{Paragraph, Wrap},
-    Frame,
 };
 
 pub struct StatusPanel {

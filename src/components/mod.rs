@@ -14,7 +14,7 @@ pub use title_panel::TitlePanel;
 
 use crate::action::Action;
 use crate::event::Event;
-use ratatui::{layout::Rect, Frame};
+use ratatui::{Frame, layout::Rect};
 
 /// `Component` trait，用于有独立状态和渲染逻辑的界面区域。
 ///

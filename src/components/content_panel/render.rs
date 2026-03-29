@@ -1,16 +1,19 @@
 //! 内容面板渲染：页面绘制、内容块渲染和文本输出。
 
-use super::layout::{ContentPage, current_page_body, effective_height, gutter_width, pagination_rows, truncate_to_width};
 use super::ContentPanel;
+use super::layout::{
+    ContentPage, current_page_body, effective_height, gutter_width, pagination_rows,
+    truncate_to_width,
+};
 use crate::controls::{AnyControl, ControlFeedback};
 use crate::runtime::{ContentBlock, OperationStatus};
 use crate::theme::RenderContext;
 
 use ratatui::{
+    Frame,
     layout::Rect,
     style::{Color, Modifier, Style},
     widgets::Paragraph,
-    Frame,
 };
 use unicode_width::UnicodeWidthChar;
 
@@ -132,12 +135,7 @@ pub(super) fn render_content_block(
         .set_char(if selected && panel.focused { '>' } else { ' ' })
         .set_fg(Color::Yellow);
 
-    let text_rect = Rect::new(
-        content_rect.x + 2,
-        content_rect.y,
-        text_width,
-        content_rect.height,
-    );
+    let text_rect = Rect::new(content_rect.x + 2, content_rect.y, text_width, content_rect.height);
     let control_x = content_rect
         .x
         .saturating_add(2)
@@ -160,12 +158,7 @@ pub(super) fn render_content_block(
         },
     );
 
-    let control_rect = Rect::new(
-        control_x,
-        content_rect.y,
-        control_width,
-        content_rect.height,
-    );
+    let control_rect = Rect::new(control_x, content_rect.y, control_width, content_rect.height);
     let feedback = feedback_for(panel, block_index);
     render_control(
         panel.block_control(block_index).unwrap_or(&block.control),

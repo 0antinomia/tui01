@@ -5,9 +5,9 @@ use std::panic;
 
 use crossterm::{
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{Terminal, backend::CrosstermBackend};
 
 /// 最小终端宽度
 pub const MIN_WIDTH: u16 = 80;
@@ -69,10 +69,7 @@ pub fn check_minimum_size() -> Result<(), String> {
     let (width, height) = terminal_size().map_err(|e| format!("无法获取终端尺寸: {}", e))?;
 
     if width < MIN_WIDTH || height < MIN_HEIGHT {
-        Err(format!(
-            "终端太小（最小需要 {}x{}，当前 {}x{}）",
-            MIN_WIDTH, MIN_HEIGHT, width, height
-        ))
+        Err(format!("终端太小（最小需要 {}x{}，当前 {}x{}）", MIN_WIDTH, MIN_HEIGHT, width, height))
     } else {
         let aspect_ratio = width as f64 / height as f64;
         if aspect_ratio < MIN_ASPECT_RATIO {

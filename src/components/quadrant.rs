@@ -1,10 +1,10 @@
 //! 四区"田"字形布局组件
 
 use ratatui::{
+    Frame,
     layout::Rect,
     style::{Color, Style},
     widgets::Block,
-    Frame,
 };
 
 use super::Component;
@@ -27,10 +27,7 @@ pub struct QuadrantConfig {
 
 impl Default for QuadrantConfig {
     fn default() -> Self {
-        Self {
-            horizontal_split: 20,
-            vertical_split: 20,
-        }
+        Self { horizontal_split: 20, vertical_split: 20 }
     }
 }
 
@@ -121,16 +118,12 @@ impl Component for QuadrantLayout {
 
         // 绘制垂直分割线（│）
         for y in inner_y..inner_y + inner_height {
-            f.buffer_mut()[(vertical_divider_x, y)]
-                .set_char('│')
-                .set_fg(Color::Blue);
+            f.buffer_mut()[(vertical_divider_x, y)].set_char('│').set_fg(Color::Blue);
         }
 
         // 绘制水平分割线（─）
         for x in inner_x..inner_x + inner_width {
-            f.buffer_mut()[(x, horizontal_divider_y)]
-                .set_char('─')
-                .set_fg(Color::Blue);
+            f.buffer_mut()[(x, horizontal_divider_y)].set_char('─').set_fg(Color::Blue);
         }
 
         // 绘制中心交叉点（┼）
@@ -141,9 +134,7 @@ impl Component for QuadrantLayout {
         // 修复与外边框的交叉点
         // 顶部交叉点（┬）
         if inner_y > layout_rect.y {
-            f.buffer_mut()[(vertical_divider_x, inner_y - 1)]
-                .set_char('┬')
-                .set_fg(Color::Blue);
+            f.buffer_mut()[(vertical_divider_x, inner_y - 1)].set_char('┬').set_fg(Color::Blue);
         }
         // 底部交叉点（┴）
         if inner_y + inner_height < layout_rect.y + layout_rect.height {
@@ -153,9 +144,7 @@ impl Component for QuadrantLayout {
         }
         // 左侧交叉点（├）
         if inner_x > layout_rect.x {
-            f.buffer_mut()[(inner_x - 1, horizontal_divider_y)]
-                .set_char('├')
-                .set_fg(Color::Blue);
+            f.buffer_mut()[(inner_x - 1, horizontal_divider_y)].set_char('├').set_fg(Color::Blue);
         }
         // 右侧交叉点（┤）
         if inner_x + inner_width < layout_rect.x + layout_rect.width {
@@ -174,10 +163,8 @@ mod tests {
 
     #[test]
     fn calculate_quadrants_align_with_rendered_boundaries() {
-        let layout = QuadrantLayout::new(QuadrantConfig {
-            horizontal_split: 25,
-            vertical_split: 40,
-        });
+        let layout =
+            QuadrantLayout::new(QuadrantConfig { horizontal_split: 25, vertical_split: 40 });
 
         let (top_left, top_right, bottom_left, bottom_right) =
             layout.calculate_quadrants(Rect::new(0, 0, 100, 50));

@@ -1,10 +1,10 @@
 //! TEA 核心：事件处理、键盘分发和动作应用。
 
-use super::ShowcaseApp;
 use super::super::action::Action;
+use super::ShowcaseApp;
+use super::{operation_poll, screen_manager};
 use crate::components::Component;
 use crate::event::{Event, Key};
-use super::{operation_poll, screen_manager};
 
 pub(super) fn handle_event(app: &mut ShowcaseApp, event: Event) {
     match event {
@@ -37,16 +37,14 @@ fn handle_menu_key(app: &mut ShowcaseApp, key: Key) {
             screen_manager::focus_content(app);
         }
         Key::Char('K') => {
-            app.content_panel
-                .previous_page_with_height(app.current_content_rect().height);
+            app.content_panel.previous_page_with_height(app.current_content_rect().height);
             let action = app.menu.handle_events(Some(Event::Key(key)));
             apply_action(app, action);
             screen_manager::sync_active_to_menu_selection(app);
         }
         Key::Char('J') => {
             let content_rect = app.current_content_rect();
-            app.content_panel
-                .next_page(content_rect.width, content_rect.height);
+            app.content_panel.next_page(content_rect.width, content_rect.height);
             let action = app.menu.handle_events(Some(Event::Key(key)));
             apply_action(app, action);
             screen_manager::sync_active_to_menu_selection(app);
@@ -73,9 +71,8 @@ fn handle_content_key(app: &mut ShowcaseApp, key: Key) {
             }
             Key::Enter => {
                 let operation_id = operation_poll::next_operation_id(app);
-                if let Some(request) = app
-                    .content_panel
-                    .confirm_control(operation_id, app.active_screen)
+                if let Some(request) =
+                    app.content_panel.confirm_control(operation_id, app.active_screen)
                 {
                     operation_poll::submit_operation(app, request);
                 }
@@ -83,9 +80,8 @@ fn handle_content_key(app: &mut ShowcaseApp, key: Key) {
             }
             Key::Char('l') if app.content_panel.active_control_uses_l_as_confirm() => {
                 let operation_id = operation_poll::next_operation_id(app);
-                if let Some(request) = app
-                    .content_panel
-                    .confirm_control(operation_id, app.active_screen)
+                if let Some(request) =
+                    app.content_panel.confirm_control(operation_id, app.active_screen)
                 {
                     operation_poll::submit_operation(app, request);
                 }
@@ -112,25 +108,21 @@ fn handle_content_key(app: &mut ShowcaseApp, key: Key) {
 
     match key {
         Key::Up | Key::Char('k') => {
-            app.content_panel
-                .select_previous_block(content_rect.height);
+            app.content_panel.select_previous_block(content_rect.height);
         }
         Key::Down | Key::Char('j') => {
             app.content_panel.select_next_block(content_rect.height);
         }
         Key::Char('K') => {
-            app.content_panel
-                .previous_page_with_height(content_rect.height);
+            app.content_panel.previous_page_with_height(content_rect.height);
         }
         Key::Char('J') => {
-            app.content_panel
-                .next_page(content_rect.width, content_rect.height);
+            app.content_panel.next_page(content_rect.width, content_rect.height);
         }
         Key::Char('l') | Key::Enter => {
             let operation_id = operation_poll::next_operation_id(app);
-            if let Some(request) = app
-                .content_panel
-                .activate_selected_control(operation_id, app.active_screen)
+            if let Some(request) =
+                app.content_panel.activate_selected_control(operation_id, app.active_screen)
             {
                 operation_poll::submit_operation(app, request);
             }

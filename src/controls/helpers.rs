@@ -10,7 +10,11 @@ use unicode_width::UnicodeWidthChar;
 
 use super::control_trait::ControlFeedback;
 
-pub(super) fn framed_block(selected: bool, active: bool, feedback: ControlFeedback) -> Block<'static> {
+pub(super) fn framed_block(
+    selected: bool,
+    active: bool,
+    feedback: ControlFeedback,
+) -> Block<'static> {
     Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
@@ -127,10 +131,7 @@ pub(super) fn render_feedback_marker(buf: &mut Buffer, area: Rect, feedback: Con
     }
 
     let x = area.x + area.width.saturating_add(1);
-    let y = area
-        .y
-        .saturating_add(1)
-        .min(area.y + area.height.saturating_sub(1));
+    let y = area.y.saturating_add(1).min(area.y + area.height.saturating_sub(1));
     buf.set_string(x, y, symbol, Style::default().fg(color));
 }
 

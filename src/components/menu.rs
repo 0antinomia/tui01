@@ -6,10 +6,10 @@ use crate::action::Action;
 use crate::components::Component;
 use crate::event::{Event, Key};
 use ratatui::{
+    Frame,
     layout::{Alignment, Rect},
     style::{Color, Style},
     widgets::Paragraph,
-    Frame,
 };
 
 /// 单个菜单项，只包含展示标签。
@@ -22,9 +22,7 @@ pub struct MenuItem {
 impl MenuItem {
     /// 使用给定标签创建菜单项。
     pub fn new(label: impl Into<String>) -> Self {
-        Self {
-            label: label.into(),
-        }
+        Self { label: label.into() }
     }
 }
 
@@ -85,10 +83,7 @@ impl MenuState {
         }
         let start = self.current_page * self.items_per_page;
         let end = std::cmp::min(start + self.items_per_page, self.items.len());
-        self.items[start..end]
-            .iter()
-            .map(|item| item.label.clone())
-            .collect()
+        self.items[start..end].iter().map(|item| item.label.clone()).collect()
     }
 
     /// 切到上一页。
@@ -202,10 +197,7 @@ pub struct MenuComponent {
 impl MenuComponent {
     /// 使用给定菜单项创建菜单组件。
     pub fn new(items: Vec<MenuItem>) -> Self {
-        Self {
-            state: MenuState::new(items),
-            focused: false,
-        }
+        Self { state: MenuState::new(items), focused: false }
     }
 
     /// 获取当前选中索引。
@@ -230,9 +222,7 @@ impl MenuComponent {
 
     fn item_style(&self, idx: usize, local_selected: usize) -> Style {
         if idx == local_selected {
-            Style::default()
-                .fg(Color::White)
-                .bg(Color::Rgb(52, 86, 112))
+            Style::default().fg(Color::White).bg(Color::Rgb(52, 86, 112))
         } else if self.focused {
             Style::default().fg(Color::White)
         } else {
@@ -296,9 +286,7 @@ impl Component for MenuComponent {
         // 根据当前可用高度重算每页容量。
         self.state.update_items_per_page(rect.height as usize);
 
-        let bar = self
-            .state
-            .pagination_bar(rect.width.saturating_sub(4) as usize);
+        let bar = self.state.pagination_bar(rect.width.saturating_sub(4) as usize);
         let left_padding = rect.width.saturating_sub(bar.len() as u16) / 2;
         for (idx, (ch, color)) in bar.into_iter().enumerate() {
             let x = rect.x + left_padding + idx as u16;
@@ -308,12 +296,8 @@ impl Component for MenuComponent {
             f.buffer_mut()[(x, rect.y)].set_char(ch).set_fg(color);
         }
 
-        let list_rect = Rect::new(
-            rect.x,
-            rect.y.saturating_add(2),
-            rect.width,
-            rect.height.saturating_sub(2),
-        );
+        let list_rect =
+            Rect::new(rect.x, rect.y.saturating_add(2), rect.width, rect.height.saturating_sub(2));
 
         let page_start = self.state.current_page * self.state.items_per_page;
         let local_selected = self.state.selected.saturating_sub(page_start);
@@ -327,9 +311,7 @@ impl Component for MenuComponent {
 
             let style = self.item_style(idx, local_selected);
 
-            let para = Paragraph::new(label.as_str())
-                .alignment(Alignment::Center)
-                .style(style);
+            let para = Paragraph::new(label.as_str()).alignment(Alignment::Center).style(style);
             f.render_widget(para, Rect::new(list_rect.x, y, list_rect.width, 1));
         }
     }
@@ -344,9 +326,7 @@ mod tests {
     use ratatui::style::Color;
 
     fn make_items(count: usize) -> Vec<MenuItem> {
-        (0..count)
-            .map(|idx| MenuItem::new(format!("Item {idx}")))
-            .collect()
+        (0..count).map(|idx| MenuItem::new(format!("Item {idx}"))).collect()
     }
 
     #[test]
@@ -430,9 +410,7 @@ mod tests {
         let bar = state.pagination_bar(8);
 
         assert_eq!(bar.len(), 8);
-        assert!(bar
-            .iter()
-            .all(|(ch, color)| *ch == '━' && *color == Color::White));
+        assert!(bar.iter().all(|(ch, color)| *ch == '━' && *color == Color::White));
     }
 
     #[test]
@@ -443,11 +421,7 @@ mod tests {
 
         let bar = state.pagination_bar(8);
 
-        assert!(bar
-            .iter()
-            .any(|(ch, color)| *ch == '━' && *color == Color::White));
-        assert!(bar
-            .iter()
-            .any(|(ch, color)| *ch == '─' && *color == Color::Rgb(170, 170, 170)));
+        assert!(bar.iter().any(|(ch, color)| *ch == '━' && *color == Color::White));
+        assert!(bar.iter().any(|(ch, color)| *ch == '─' && *color == Color::Rgb(170, 170, 170)));
     }
 }

@@ -1,23 +1,23 @@
 //! 异步操作执行器，负责运行真实命令并回传结果。
 
-mod types;
-mod registry;
 mod executor_core;
+mod registry;
 mod shell;
+mod types;
 
 // Re-export all public types so external callers see the same API
-pub use types::{
-    OperationRequest, OperationSource, OperationResult, ActionContext, ActionOutcome,
-};
-pub use registry::ActionRegistry;
 pub use executor_core::OperationExecutor;
+pub use registry::ActionRegistry;
+pub use types::{ActionContext, ActionOutcome, OperationRequest, OperationResult, OperationSource};
 
 #[cfg(test)]
 mod tests {
-    use super::shell::{render_command_template, shell_escape};
-    use super::{ActionOutcome, ActionRegistry, OperationExecutor, OperationRequest, OperationSource};
     use super::super::framework_log::FrameworkLogger;
     use super::super::host_types::{HostEvent, HostLogLevel, HostLogRecord, ShellPolicy};
+    use super::shell::{render_command_template, shell_escape};
+    use super::{
+        ActionOutcome, ActionRegistry, OperationExecutor, OperationRequest, OperationSource,
+    };
     use std::collections::{HashMap, HashSet};
     use std::sync::{Arc, Mutex};
 
@@ -68,11 +68,7 @@ mod tests {
         registry.register_action_handler("echo_params", |context| async move {
             ActionOutcome::success(format!(
                 "project={}",
-                context
-                    .params
-                    .get("project_name")
-                    .cloned()
-                    .unwrap_or_default()
+                context.params.get("project_name").cloned().unwrap_or_default()
             ))
         });
         let mut executor = OperationExecutor::with_registry(registry);
@@ -109,13 +105,7 @@ mod tests {
     async fn registered_handler_action_receives_host_context() {
         let mut registry = ActionRegistry::new();
         registry.register_action_handler("host_echo", |context| async move {
-            ActionOutcome::success(
-                context
-                    .host
-                    .get("project_root")
-                    .cloned()
-                    .unwrap_or_default(),
-            )
+            ActionOutcome::success(context.host.get("project_root").cloned().unwrap_or_default())
         });
         let mut executor = OperationExecutor::with_registry(registry);
 
@@ -263,20 +253,10 @@ mod tests {
 
         let events = events.lock().unwrap().clone();
         assert_eq!(events.len(), 2);
-        assert!(matches!(
-            events[0],
-            HostEvent::OperationStarted {
-                operation_id: 5,
-                ..
-            }
-        ));
+        assert!(matches!(events[0], HostEvent::OperationStarted { operation_id: 5, .. }));
         assert!(matches!(
             events[1],
-            HostEvent::OperationFinished {
-                operation_id: 5,
-                success: true,
-                ..
-            }
+            HostEvent::OperationFinished { operation_id: 5, success: true, .. }
         ));
     }
 
