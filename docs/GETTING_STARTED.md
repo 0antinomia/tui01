@@ -1,18 +1,18 @@
-# Getting Started
+# 快速开始
 
-## Run The Canonical Example
+## 先运行官方示例
 
-Start with the one official runnable example:
+先从唯一的官方可运行示例开始：
 
 ```bash
 cargo run --example host_template
 ```
 
-Use [../examples/host_template.rs](../examples/host_template.rs) as the source of truth for the reset-era integration pattern.
+当前推荐的接入方式，以 [../examples/host_template.rs](../examples/host_template.rs) 为准。
 
-## Recommended Downstream Layout
+## 推荐的项目结构
 
-For a real application, keep the wiring compact and explicit:
+真实项目中，建议把接入代码拆成比较清晰的几层：
 
 ```text
 project root
@@ -24,22 +24,22 @@ project root
     └── main.rs
 ```
 
-- `actions.rs`: action names and business logic
-- `host.rs`: `RuntimeHost` construction, policy, hooks, and allowlists
-- `app.rs`: `AppSpec` screens, pages, sections, and fields
-- `main.rs`: assemble the app and start your runtime
+- `actions.rs`：动作名称和业务逻辑
+- `host.rs`：`RuntimeHost` 构造、策略、hook 和 allowlist
+- `app.rs`：`AppSpec`、页面、分区和字段定义
+- `main.rs`：把各部分组装起来并启动运行逻辑
 
-## Step 1: Build RuntimeHost First
+## 第一步：先构建 RuntimeHost
 
-Create `RuntimeHost` before authoring side-effectful fields so the allowed execution surface is clear.
+建议先把 `RuntimeHost` 搭出来，再去定义会触发副作用的字段，这样执行边界会更清楚。
 
-Recommended defaults:
+推荐默认做法：
 
-- prefer `registered_action` over raw shell commands
-- start from `ShellPolicy::RegisteredOnly`
-- set a working directory explicitly
-- add env allowlists before enabling real commands
-- attach logger and event hooks before shipping side effects
+- 优先使用 `registered_action`，不要直接暴露原始 shell 执行
+- 先从 `ShellPolicy::RegisteredOnly` 开始
+- 明确设置工作目录
+- 真正启用命令前先收紧环境变量白名单
+- 在有副作用的场景里尽早挂上 logger 和 event hook
 
 ```rust
 use tui01::host::ActionOutcome;
@@ -79,9 +79,9 @@ fn build_host() -> RuntimeHost {
 }
 ```
 
-## Step 2: Define AppSpec With Prelude + Field
+## 第二步：用 Prelude 和 Field 定义 AppSpec
 
-Keep the app definition on the canonical consumer surface: `tui01::prelude` and `tui01::field`.
+应用定义建议始终围绕 `tui01::prelude` 和 `tui01::field` 来写：
 
 ```rust
 use tui01::field;
@@ -117,34 +117,30 @@ fn build_spec() -> AppSpec {
 }
 ```
 
-## Step 3: Attach The Host
+## 第三步：挂接 Host
 
-Once your `RuntimeHost` and `AppSpec` are ready, attach them with `try_into_showcase_app_with_host(host)`.
+当 `RuntimeHost` 和 `AppSpec` 都准备好后，用 `try_into_showcase_app_with_host(host)` 把它们连起来：
 
 ```rust
 let host = build_host();
 let mut app = build_spec().try_into_showcase_app_with_host(host)?;
 ```
 
-## Step 4: Validate Registered Actions Before Running
+## 第四步：运行前校验注册动作
 
-Before entering your runtime loop, verify that every `registered_action` used in the spec exists on the host:
+进入真实运行前，先确认 spec 中声明的 `registered_action` 都已经在 host 上注册：
 
 ```rust
 app.validate_registered_actions()?;
 ```
 
-This catches missing host registrations before users trigger real behavior.
+这样可以在用户真正触发动作之前，就提前发现遗漏。
 
-## Step 5: Move From Example To Production
+## 第五步：从示例过渡到真实项目
 
-As you replace the example logic with real work:
+把示例替换成真实业务逻辑时，建议保持这些原则：
 
-- keep `registered_action` as the primary execution path
-- narrow cwd and env allowlists to what the action needs
-- log host activity so failures are visible during integration
-- keep event hooks wired while you validate operational behavior
-
-## Upgrading Older Integrations
-
-If you are migrating older `tui01` code, leave the newcomer path here and switch to [docs/MIGRATION.md](MIGRATION.md) instead of mixing upgrade work into this flow.
+- 让 `registered_action` 成为默认执行路径
+- 把 cwd 和 env allowlist 收紧到动作真正需要的范围
+- 保留宿主日志，便于定位接入阶段的问题
+- 在验证行为是否符合预期时，继续保留 event hook

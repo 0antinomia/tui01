@@ -1,35 +1,35 @@
 # tui01
 
-`tui01` is a Rust TUI framework for building fixed four-quadrant tools with declarative screens and host-controlled side effects.
+`tui01` 是一个 Rust TUI 框架，用来构建固定四分区布局、声明式页面结构、以及由宿主控制副作用执行的工具型应用。
 
-The reset-era consumer contract is intentionally small:
+当前建议直接围绕下面这三个公开入口使用：
 
 - `tui01::prelude`
 - `tui01::field`
 - `RuntimeHost`
 
-## Start Here
+## 从这里开始
 
-Run the canonical example first:
+先运行官方示例：
 
 ```bash
 cargo run --example host_template
 ```
 
-That example is the single official runnable path for downstream users:
+这个示例就是当前最直接、也最推荐参考的接入路径：
 [examples/host_template.rs](examples/host_template.rs)
 
-## Who It Fits
+## 适合什么场景
 
-`tui01` is a good fit when you want:
+`tui01` 适合以下类型的项目：
 
-- an internal operations or developer tool
-- a TUI driven by declarative page specs instead of ad hoc widget wiring
-- a host boundary that registers actions and constrains shell execution
+- 内部运维工具或开发者工具
+- 希望用声明式页面结构组织 TUI，而不是手写大量 widget 拼装逻辑
+- 需要由宿主统一注册动作、限制 shell 执行边界的应用
 
-## Minimal App Shape
+## 最小应用结构
 
-Use `tui01::prelude` for the builder flow and `tui01::field` for field helpers:
+页面定义建议通过 `tui01::prelude` 完成，字段辅助函数放在 `tui01::field`：
 
 ```rust
 use tui01::field;
@@ -40,16 +40,16 @@ let app = AppSpec::new().screen(
         "Workspace",
         page("Workspace").section(
             section("Config")
-                .field(field::text("Project", "demo", "Project name"))
-                .field(field::toggle("Enable sync", true)),
+                .field(field::text("Project", "demo", "项目名称"))
+                .field(field::toggle("启用同步", true)),
         ),
     ),
 );
 ```
 
-## Host Integration
+## 宿主接入方式
 
-For real applications, attach a `RuntimeHost` and keep side effects behind registered actions:
+真实应用里，建议把所有副作用都放到 `RuntimeHost` 注册动作后面：
 
 ```rust
 use tui01::field;
@@ -78,19 +78,18 @@ let mut app = AppSpec::new()
 app.validate_registered_actions()?;
 ```
 
-The full end-to-end version of that flow lives in
-[examples/host_template.rs](examples/host_template.rs).
+完整可运行版本可直接看：
+[examples/host_template.rs](examples/host_template.rs)
 
-## Recommended Flow
+## 推荐接入顺序
 
-1. Run `cargo run --example host_template`.
-2. Copy the wiring pattern from `examples/host_template.rs`.
-3. Define your screens and fields through `tui01::prelude` and `tui01::field`.
-4. Build a `RuntimeHost`, register actions, and attach it with `try_into_showcase_app_with_host(host)`.
-5. Validate registered actions before shipping host-backed behavior.
+1. 先运行 `cargo run --example host_template`
+2. 按示例中的结构复制接入方式
+3. 用 `tui01::prelude` 和 `tui01::field` 定义页面与字段
+4. 构建 `RuntimeHost`，注册动作，再通过 `try_into_showcase_app_with_host(host)` 挂接
+5. 在进入真实运行逻辑前执行 `validate_registered_actions()`
 
-## Further Reading
+## 继续阅读
 
-- Deeper onboarding: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
-- Upgrading older integrations: [docs/MIGRATION.md](docs/MIGRATION.md)
-- Breaking reset notes: [CHANGELOG.md](CHANGELOG.md)
+- 更完整的接入说明：[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
+- 当前版本策略说明：[docs/VERSIONING.md](docs/VERSIONING.md)

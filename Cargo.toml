@@ -20,9 +20,7 @@ include = [
     "/src/**",
     "/examples/host_template.rs",
     "/docs/GETTING_STARTED.md",
-    "/docs/MIGRATION.md",
     "/docs/VERSIONING.md",
-    "/docs/RELEASE_CHECKLIST.md",
 ]
 
 [dependencies]

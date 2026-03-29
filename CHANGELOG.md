@@ -2,19 +2,29 @@
 
 ## 0.3.0
 
-Breaking reset release for downstream users adopting the new public contract. This affects teams upgrading older integrations that depended on compatibility aliases, root event/tui entry paths, or the bare `cargo run` flow. The supported consumer surface is now centered on `tui01::prelude`, `tui01::field`, and `RuntimeHost`. Use [docs/MIGRATION.md](docs/MIGRATION.md) before upgrading existing integrations.
+这一版的重点不是新增大量功能，而是继续收敛公开接入面，让当前推荐的使用方式更清晰。
 
-### Breaking
+### 主要调整
 
-- Removed compatibility aliases such as `tui01::builder` from the public guidance path. Import canonical builder helpers through `tui01::prelude` instead.
-- Removed legacy root-level public entry paths such as `tui01::event` and `tui01::tui` from the supported consumer contract.
-- Removed bare `cargo run` as the recommended entry path. Run `cargo run --example host_template` for the canonical reset-era example.
-- Older integrations should migrate to `tui01::prelude`, `tui01::field`, and `RuntimeHost` with the old-to-new mappings in [docs/MIGRATION.md](docs/MIGRATION.md).
+- 公开接入路径继续收敛到 `tui01::prelude`、`tui01::field` 和 `RuntimeHost`
+- 不再把历史兼容别名作为推荐入口
+- 不再把裸 `cargo run` 作为默认示例路径，统一推荐 `cargo run --example host_template`
 
-### Changed
+### 文档与说明调整
 
-- Public onboarding and versioning docs now route upgrade work through [docs/MIGRATION.md](docs/MIGRATION.md) and keep the canonical example as the only official runnable entrypoint.
-- Release-facing guidance now documents the `0.3.0` reset as a breaking `0.x` contract update instead of a transitional compatibility story or a `1.0.0` stabilization promise.
+- README 和上手文档围绕当前主接入路径重新整理
+- 版本说明更明确地表达了 `0.x` 阶段仍可能继续调整
+- 当前示例和文档都以 `examples/host_template.rs` 为统一参考
+
+## 0.2.0
+
+这一版主要是对项目架构进行了一轮重构，没有引入实际功能层面的新增。
+
+### 主要内容
+
+- 重组模块结构并收敛内部边界
+- 调整宿主层、执行链和控件体系的组织方式
+- 以架构整理和代码收口为主，不以功能扩展为目标
 
 ## 0.1.0
 
