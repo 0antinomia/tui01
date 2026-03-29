@@ -1,8 +1,8 @@
 # Changelog
 
-## 0.2.0
+## 0.3.0
 
-Reset release for downstream users adopting the new public contract. This affects teams upgrading older integrations that depended on compatibility aliases, root event/tui entry paths, or the bare `cargo run` flow. The supported consumer surface is now centered on `tui01::prelude`, `tui01::field`, and `RuntimeHost`. Use [docs/MIGRATION.md](docs/MIGRATION.md) before upgrading existing integrations.
+Breaking reset release for downstream users adopting the new public contract. This affects teams upgrading older integrations that depended on compatibility aliases, root event/tui entry paths, or the bare `cargo run` flow. The supported consumer surface is now centered on `tui01::prelude`, `tui01::field`, and `RuntimeHost`. Use [docs/MIGRATION.md](docs/MIGRATION.md) before upgrading existing integrations.
 
 ### Breaking
 
@@ -14,7 +14,7 @@ Reset release for downstream users adopting the new public contract. This affect
 ### Changed
 
 - Public onboarding and versioning docs now route upgrade work through [docs/MIGRATION.md](docs/MIGRATION.md) and keep the canonical example as the only official runnable entrypoint.
-- Release-facing guidance now documents the reset as a breaking contract update instead of a transitional compatibility story.
+- Release-facing guidance now documents the `0.3.0` reset as a breaking `0.x` contract update instead of a transitional compatibility story or a `1.0.0` stabilization promise.
 
 ## 0.1.0
 

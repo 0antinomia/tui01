@@ -1,8 +1,29 @@
 [package]
 name = "tui01"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
+description = "Rust TUI framework for fixed four-quadrant tools with declarative screens and host-controlled side effects."
+readme = "README.md"
+repository = "https://github.com/0antinomia/tui01"
+homepage = "https://github.com/0antinomia/tui01"
+documentation = "https://docs.rs/tui01"
+rust-version = "1.93"
+keywords = ["tui", "terminal", "ratatui", "framework"]
+categories = ["command-line-interface"]
+include = [
+    "/Cargo.toml",
+    "/README.md",
+    "/CHANGELOG.md",
+    "/LICENSE-APACHE",
+    "/LICENSE-MIT",
+    "/src/**",
+    "/examples/host_template.rs",
+    "/docs/GETTING_STARTED.md",
+    "/docs/MIGRATION.md",
+    "/docs/VERSIONING.md",
+    "/docs/RELEASE_CHECKLIST.md",
+]
 
 [dependencies]
 ratatui = { version = "0.30.0", features = ["serde"] }
