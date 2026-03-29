@@ -40,45 +40,24 @@ pub struct AppSpec {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AppValidationError {
     DuplicateFieldId(String),
-    MissingResultTarget {
-        source_field: String,
-        target_id: String,
-    },
-    InvalidResultTarget {
-        source_field: String,
-        target_id: String,
-    },
-    UnknownRegisteredAction {
-        source_field: String,
-        action: String,
-    },
+    MissingResultTarget { source_field: String, target_id: String },
+    InvalidResultTarget { source_field: String, target_id: String },
+    UnknownRegisteredAction { source_field: String, action: String },
 }
 
 impl std::fmt::Display for AppValidationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::DuplicateFieldId(id) => write!(f, "duplicate field id: {id}"),
-            Self::MissingResultTarget {
-                source_field,
-                target_id,
-            } => write!(
-                f,
-                "field {source_field} references missing result target id: {target_id}"
-            ),
-            Self::InvalidResultTarget {
-                source_field,
-                target_id,
-            } => write!(
-                f,
-                "field {source_field} references non-log result target id: {target_id}"
-            ),
-            Self::UnknownRegisteredAction {
-                source_field,
-                action,
-            } => write!(
-                f,
-                "field {source_field} references unknown registered action: {action}"
-            ),
+            Self::MissingResultTarget { source_field, target_id } => {
+                write!(f, "field {source_field} references missing result target id: {target_id}")
+            }
+            Self::InvalidResultTarget { source_field, target_id } => {
+                write!(f, "field {source_field} references non-log result target id: {target_id}")
+            }
+            Self::UnknownRegisteredAction { source_field, action } => {
+                write!(f, "field {source_field} references unknown registered action: {action}")
+            }
         }
     }
 }
@@ -139,11 +118,8 @@ impl AppSpec {
     }
 
     pub fn validate(&self) -> Result<(), AppValidationError> {
-        let actions = self
-            .shell_actions
-            .iter()
-            .map(|(name, _)| name.clone())
-            .collect::<HashSet<_>>();
+        let actions =
+            self.shell_actions.iter().map(|(name, _)| name.clone()).collect::<HashSet<_>>();
         self.validate_with_actions(&actions)
     }
 
@@ -151,11 +127,8 @@ impl AppSpec {
         &self,
         registry: &ActionRegistry,
     ) -> Result<(), AppValidationError> {
-        let mut actions = self
-            .shell_actions
-            .iter()
-            .map(|(name, _)| name.clone())
-            .collect::<HashSet<_>>();
+        let mut actions =
+            self.shell_actions.iter().map(|(name, _)| name.clone()).collect::<HashSet<_>>();
         for name in self.registered_action_names() {
             if registry.has_action(&name) {
                 actions.insert(name);
@@ -261,10 +234,7 @@ impl AppSpec {
             registry.register_shell_action(name, command);
         }
         let mut app = ShowcaseApp::with_registry(
-            ShowcaseCopy {
-                title_text: self.title_text,
-                status_controls: self.status_controls,
-            },
+            ShowcaseCopy { title_text: self.title_text, status_controls: self.status_controls },
             self.screens,
             registry,
         );
@@ -293,10 +263,7 @@ impl AppSpec {
         }
 
         let mut app = ShowcaseApp::with_host(
-            ShowcaseCopy {
-                title_text: self.title_text,
-                status_controls: self.status_controls,
-            },
+            ShowcaseCopy { title_text: self.title_text, status_controls: self.status_controls },
             screens,
             host,
         );
@@ -396,10 +363,7 @@ mod tests {
             .validate()
             .unwrap_err();
 
-        assert!(matches!(
-            err,
-            AppValidationError::UnknownRegisteredAction { .. }
-        ));
+        assert!(matches!(err, AppValidationError::UnknownRegisteredAction { .. }));
     }
 
     #[test]
@@ -421,10 +385,7 @@ mod tests {
             .validate()
             .unwrap_err();
 
-        assert!(matches!(
-            err,
-            AppValidationError::MissingResultTarget { .. }
-        ));
+        assert!(matches!(err, AppValidationError::MissingResultTarget { .. }));
     }
 
     #[test]

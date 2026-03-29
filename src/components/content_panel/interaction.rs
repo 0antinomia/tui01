@@ -14,12 +14,7 @@ fn handle_control_key(control: &mut AnyControl, key: Key) -> bool {
 pub(super) fn handle_panel_control_key(panel: &mut ContentPanel, key: Key) -> bool {
     if panel
         .selected_block_state()
-        .map(|state| {
-            matches!(
-                state.status,
-                crate::runtime::OperationStatus::Running { .. }
-            )
-        })
+        .map(|state| matches!(state.status, crate::runtime::OperationStatus::Running { .. }))
         .unwrap_or(false)
     {
         return false;
@@ -61,10 +56,8 @@ pub(super) fn activate_panel_selected_control(
         }
         Some(SelectedControlKind::StaticData | SelectedControlKind::DynamicData) | None => None,
         Some(SelectedControlKind::Custom) => {
-            let is_editable = panel
-                .selected_block_control_mut()
-                .map(|c| c.is_editable())
-                .unwrap_or(false);
+            let is_editable =
+                panel.selected_block_control_mut().map(|c| c.is_editable()).unwrap_or(false);
             let triggers = panel
                 .selected_block_control_mut()
                 .map(|c| c.triggers_on_activate())
@@ -111,10 +104,7 @@ pub(super) fn select_next_block(panel: &mut ContentPanel, height: u16) {
         return;
     }
 
-    if let Some(pos) = visible
-        .iter()
-        .position(|index| *index == panel.runtime.selected_block)
-    {
+    if let Some(pos) = visible.iter().position(|index| *index == panel.runtime.selected_block) {
         if pos + 1 < visible.len() {
             panel.runtime.selected_block = visible[pos + 1];
             panel.control_active = false;
@@ -144,10 +134,7 @@ pub(super) fn select_previous_block(panel: &mut ContentPanel, height: u16) {
         return;
     }
 
-    if let Some(pos) = visible
-        .iter()
-        .position(|index| *index == panel.runtime.selected_block)
-    {
+    if let Some(pos) = visible.iter().position(|index| *index == panel.runtime.selected_block) {
         if pos > 0 {
             panel.runtime.selected_block = visible[pos - 1];
             panel.control_active = false;
@@ -173,9 +160,7 @@ fn confirm_selected_control(
     operation_id: u64,
     screen_index: usize,
 ) -> Option<OperationRequest> {
-    let snapshot = panel
-        .selected_block_state_mut()
-        .and_then(|state| state.snapshot.take());
+    let snapshot = panel.selected_block_state_mut().and_then(|state| state.snapshot.take());
     let block_index = panel.runtime.selected_block;
     if panel.block_is_running(block_index) {
         return None;
@@ -266,33 +251,31 @@ fn start_selected_action(
 }
 
 fn selected_control_kind(panel: &ContentPanel) -> Option<SelectedControlKind> {
-    panel
-        .block_control(panel.runtime.selected_block)
-        .map(|control| match control {
-            AnyControl::Builtin(crate::controls::BuiltinControl::TextInput(_)) => {
-                SelectedControlKind::TextInput
-            }
-            AnyControl::Builtin(crate::controls::BuiltinControl::NumberInput(_)) => {
-                SelectedControlKind::NumberInput
-            }
-            AnyControl::Builtin(crate::controls::BuiltinControl::Select(_)) => {
-                SelectedControlKind::Select
-            }
-            AnyControl::Builtin(crate::controls::BuiltinControl::Toggle(_)) => {
-                SelectedControlKind::Toggle
-            }
-            AnyControl::Builtin(crate::controls::BuiltinControl::ActionButton(_)) => {
-                SelectedControlKind::ActionButton
-            }
-            AnyControl::Builtin(crate::controls::BuiltinControl::StaticData(_)) => {
-                SelectedControlKind::StaticData
-            }
-            AnyControl::Builtin(crate::controls::BuiltinControl::DynamicData(_)) => {
-                SelectedControlKind::DynamicData
-            }
-            AnyControl::Builtin(crate::controls::BuiltinControl::LogOutput(_)) => {
-                SelectedControlKind::LogOutput
-            }
-            AnyControl::Custom(_) => SelectedControlKind::Custom,
-        })
+    panel.block_control(panel.runtime.selected_block).map(|control| match control {
+        AnyControl::Builtin(crate::controls::BuiltinControl::TextInput(_)) => {
+            SelectedControlKind::TextInput
+        }
+        AnyControl::Builtin(crate::controls::BuiltinControl::NumberInput(_)) => {
+            SelectedControlKind::NumberInput
+        }
+        AnyControl::Builtin(crate::controls::BuiltinControl::Select(_)) => {
+            SelectedControlKind::Select
+        }
+        AnyControl::Builtin(crate::controls::BuiltinControl::Toggle(_)) => {
+            SelectedControlKind::Toggle
+        }
+        AnyControl::Builtin(crate::controls::BuiltinControl::ActionButton(_)) => {
+            SelectedControlKind::ActionButton
+        }
+        AnyControl::Builtin(crate::controls::BuiltinControl::StaticData(_)) => {
+            SelectedControlKind::StaticData
+        }
+        AnyControl::Builtin(crate::controls::BuiltinControl::DynamicData(_)) => {
+            SelectedControlKind::DynamicData
+        }
+        AnyControl::Builtin(crate::controls::BuiltinControl::LogOutput(_)) => {
+            SelectedControlKind::LogOutput
+        }
+        AnyControl::Custom(_) => SelectedControlKind::Custom,
+    })
 }

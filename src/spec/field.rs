@@ -59,9 +59,7 @@ pub fn action_to_log(
     id: impl Into<String>,
     log_id: impl Into<String>,
 ) -> FieldSpec {
-    action(label, button_label)
-        .with_id(id)
-        .with_result_target(log_id)
+    action(label, button_label).with_id(id).with_result_target(log_id)
 }
 
 pub fn action_registered_to_log(
@@ -84,9 +82,7 @@ pub fn refresh_to_log(
     id: impl Into<String>,
     log_id: impl Into<String>,
 ) -> FieldSpec {
-    refresh(label, button_label)
-        .with_id(id)
-        .with_result_target(log_id)
+    refresh(label, button_label).with_id(id).with_result_target(log_id)
 }
 
 pub fn refresh_registered_to_log(

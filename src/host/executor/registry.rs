@@ -26,8 +26,7 @@ impl ActionRegistry {
     }
 
     pub fn register_shell_action(&mut self, name: impl Into<String>, command: impl Into<String>) {
-        self.actions
-            .insert(name.into(), RegisteredAction::ShellTemplate(command.into()));
+        self.actions.insert(name.into(), RegisteredAction::ShellTemplate(command.into()));
     }
 
     pub fn register_action_handler<F, Fut>(&mut self, name: impl Into<String>, handler: F)
@@ -37,8 +36,7 @@ impl ActionRegistry {
     {
         let handler =
             Arc::new(move |context: ActionContext| -> ActionFuture { Box::pin(handler(context)) });
-        self.actions
-            .insert(name.into(), RegisteredAction::Handler(handler));
+        self.actions.insert(name.into(), RegisteredAction::Handler(handler));
     }
 
     pub fn has_action(&self, name: &str) -> bool {

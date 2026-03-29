@@ -30,24 +30,15 @@ pub struct ActionButtonControl {
 
 impl ActionButtonControl {
     pub fn new(label: impl Into<String>) -> Self {
-        Self {
-            label: label.into(),
-            kind: ActionButtonKind::Primary,
-        }
+        Self { label: label.into(), kind: ActionButtonKind::Primary }
     }
 
     pub fn refresh(label: impl Into<String>) -> Self {
-        Self {
-            label: label.into(),
-            kind: ActionButtonKind::Refresh,
-        }
+        Self { label: label.into(), kind: ActionButtonKind::Refresh }
     }
 
     pub fn danger(label: impl Into<String>) -> Self {
-        Self {
-            label: label.into(),
-            kind: ActionButtonKind::Danger,
-        }
+        Self { label: label.into(), kind: ActionButtonKind::Danger }
     }
 
     pub fn handle_key(&mut self, _key: Key) -> bool {

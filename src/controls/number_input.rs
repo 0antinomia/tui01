@@ -21,10 +21,7 @@ pub struct NumberInputControl {
 
 impl NumberInputControl {
     pub fn new(value: impl Into<String>, placeholder: impl Into<String>) -> Self {
-        Self {
-            value: value.into(),
-            placeholder: placeholder.into(),
-        }
+        Self { value: value.into(), placeholder: placeholder.into() }
     }
 
     pub fn handle_key(&mut self, key: Key) -> bool {
@@ -42,26 +39,16 @@ impl NumberInputControl {
 impl ControlTrait for NumberInputControl {
     fn render(&self, area: Rect, buf: &mut Buffer, ctx: &RenderContext) {
         let area = left_aligned_control_rect(area, 14);
-        let display = if self.value.is_empty() {
-            self.placeholder.as_str()
-        } else {
-            self.value.as_str()
-        };
+        let display =
+            if self.value.is_empty() { self.placeholder.as_str() } else { self.value.as_str() };
         let style = if self.value.is_empty() {
             Style::default().fg(Color::DarkGray)
         } else {
             Style::default().fg(Color::White)
         };
-        let display = if ctx.active {
-            format!("{display}▏")
-        } else {
-            display.to_string()
-        };
+        let display = if ctx.active { format!("{display}▏") } else { display.to_string() };
         let block = framed_block(ctx.selected, ctx.active, ctx.feedback);
-        let widget = Paragraph::new(display)
-            .block(block)
-            .alignment(Alignment::Left)
-            .style(style);
+        let widget = Paragraph::new(display).block(block).alignment(Alignment::Left).style(style);
         Widget::render(widget, area, buf);
         render_feedback_marker(buf, area, ctx.feedback);
     }

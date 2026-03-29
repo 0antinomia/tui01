@@ -77,10 +77,8 @@ pub(super) fn render_command_template(
                 (false, key)
             };
 
-            let value = key
-                .strip_prefix("host.")
-                .and_then(|key| host.get(key))
-                .or_else(|| params.get(key));
+            let value =
+                key.strip_prefix("host.").and_then(|key| host.get(key)).or_else(|| params.get(key));
 
             if let Some(value) = value {
                 if raw {

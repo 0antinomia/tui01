@@ -126,12 +126,8 @@ fn apply_operation_result_to_block(
     let Some(state) = panel.block_state(target_index).cloned() else {
         return;
     };
-    let OperationStatus::Running {
-        operation_id,
-        original_control,
-        pending_control,
-        ..
-    } = state.status
+    let OperationStatus::Running { operation_id, original_control, pending_control, .. } =
+        state.status
     else {
         return;
     };
@@ -141,27 +137,16 @@ fn apply_operation_result_to_block(
     }
 
     if let Some(state) = panel.block_state_mut(target_index) {
-        state.control = if result.success {
-            pending_control
-        } else {
-            original_control
-        };
+        state.control = if result.success { pending_control } else { original_control };
         state.snapshot = None;
-        state.status = if result.success {
-            OperationStatus::Success
-        } else {
-            OperationStatus::Failure
-        };
+        state.status =
+            if result.success { OperationStatus::Success } else { OperationStatus::Failure };
     }
 }
 
 pub(super) fn format_result_output(result: &OperationResult) -> String {
     let mut parts = Vec::new();
-    parts.push(if result.success {
-        "[success]".to_string()
-    } else {
-        "[failure]".to_string()
-    });
+    parts.push(if result.success { "[success]".to_string() } else { "[failure]".to_string() });
 
     if !result.stdout.is_empty() {
         parts.push(result.stdout.clone());

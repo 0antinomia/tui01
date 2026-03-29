@@ -61,10 +61,7 @@ pub struct ShowcaseScreen {
 
 impl ShowcaseScreen {
     pub fn from_page(title: impl Into<String>, page: PageSpec) -> Self {
-        Self {
-            title: title.into(),
-            content: page.materialize().into(),
-        }
+        Self { title: title.into(), content: page.materialize().into() }
     }
 
     /// 从页面规格和控件注册表创建 ShowcaseScreen，支持自定义控件。
@@ -113,10 +110,7 @@ impl ShowcaseApp {
         registry: ActionRegistry,
         host: RuntimeHost,
     ) -> Self {
-        let items = screens
-            .iter()
-            .map(|screen| MenuItem::new(screen.title.clone()))
-            .collect();
+        let items = screens.iter().map(|screen| MenuItem::new(screen.title.clone())).collect();
         let mut menu = MenuComponent::new(items);
         menu.focus();
 

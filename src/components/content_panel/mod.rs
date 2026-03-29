@@ -197,9 +197,7 @@ impl ContentPanel {
     }
 
     pub fn total_pages(&self, _width: u16, height: u16) -> usize {
-        layout::layout_pages(self, layout::effective_height(self, height))
-            .len()
-            .max(1)
+        layout::layout_pages(self, layout::effective_height(self, height)).len().max(1)
     }
 
     pub fn apply_operation_result(&mut self, result: &OperationResult) {
@@ -207,34 +205,29 @@ impl ContentPanel {
     }
 
     fn selected_control_kind(&self) -> Option<layout::SelectedControlKind> {
-        self.block_control(self.runtime.selected_block)
-            .map(|control| match control {
-                AnyControl::Builtin(BuiltinControl::TextInput(_)) => {
-                    layout::SelectedControlKind::TextInput
-                }
-                AnyControl::Builtin(BuiltinControl::NumberInput(_)) => {
-                    layout::SelectedControlKind::NumberInput
-                }
-                AnyControl::Builtin(BuiltinControl::Select(_)) => {
-                    layout::SelectedControlKind::Select
-                }
-                AnyControl::Builtin(BuiltinControl::Toggle(_)) => {
-                    layout::SelectedControlKind::Toggle
-                }
-                AnyControl::Builtin(BuiltinControl::ActionButton(_)) => {
-                    layout::SelectedControlKind::ActionButton
-                }
-                AnyControl::Builtin(BuiltinControl::StaticData(_)) => {
-                    layout::SelectedControlKind::StaticData
-                }
-                AnyControl::Builtin(BuiltinControl::DynamicData(_)) => {
-                    layout::SelectedControlKind::DynamicData
-                }
-                AnyControl::Builtin(BuiltinControl::LogOutput(_)) => {
-                    layout::SelectedControlKind::LogOutput
-                }
-                AnyControl::Custom(_) => layout::SelectedControlKind::Custom,
-            })
+        self.block_control(self.runtime.selected_block).map(|control| match control {
+            AnyControl::Builtin(BuiltinControl::TextInput(_)) => {
+                layout::SelectedControlKind::TextInput
+            }
+            AnyControl::Builtin(BuiltinControl::NumberInput(_)) => {
+                layout::SelectedControlKind::NumberInput
+            }
+            AnyControl::Builtin(BuiltinControl::Select(_)) => layout::SelectedControlKind::Select,
+            AnyControl::Builtin(BuiltinControl::Toggle(_)) => layout::SelectedControlKind::Toggle,
+            AnyControl::Builtin(BuiltinControl::ActionButton(_)) => {
+                layout::SelectedControlKind::ActionButton
+            }
+            AnyControl::Builtin(BuiltinControl::StaticData(_)) => {
+                layout::SelectedControlKind::StaticData
+            }
+            AnyControl::Builtin(BuiltinControl::DynamicData(_)) => {
+                layout::SelectedControlKind::DynamicData
+            }
+            AnyControl::Builtin(BuiltinControl::LogOutput(_)) => {
+                layout::SelectedControlKind::LogOutput
+            }
+            AnyControl::Custom(_) => layout::SelectedControlKind::Custom,
+        })
     }
 
     // Test-only delegates for layout/render methods used by tests
@@ -418,11 +411,7 @@ mod tests {
                     .with_blocks(vec![ContentBlock::static_data("One", "value")]),
             ]));
 
-        let glyphs: Vec<char> = panel
-            .pagination_rows(8)
-            .into_iter()
-            .map(|row| row.0)
-            .collect();
+        let glyphs: Vec<char> = panel.pagination_rows(8).into_iter().map(|row| row.0).collect();
 
         assert_eq!(glyphs, vec!['\u{2503}', '\u{2503}', '\u{2503}']);
     }
@@ -434,9 +423,7 @@ mod tests {
         let cells = panel.pagination_rows(7);
 
         assert!(
-            cells
-                .iter()
-                .any(|(glyph, color, _)| *glyph == '\u{2503}' && *color == Color::White)
+            cells.iter().any(|(glyph, color, _)| *glyph == '\u{2503}' && *color == Color::White)
         );
         assert!(
             cells.iter().any(
@@ -697,25 +684,10 @@ mod tests {
         panel.select_next_block(20);
 
         let request = panel.activate_selected_control(21, 0).unwrap();
-        assert_eq!(
-            request.params.get("project_name").map(String::as_str),
-            Some("tui01")
-        );
-        assert_eq!(
-            request.params.get("server_port").map(String::as_str),
-            Some("3000")
-        );
-        assert_eq!(
-            request
-                .params
-                .get("screen.project_name")
-                .map(String::as_str),
-            Some("tui01")
-        );
-        assert_eq!(
-            request.params.get("root.server_port").map(String::as_str),
-            Some("3000")
-        );
+        assert_eq!(request.params.get("project_name").map(String::as_str), Some("tui01"));
+        assert_eq!(request.params.get("server_port").map(String::as_str), Some("3000"));
+        assert_eq!(request.params.get("screen.project_name").map(String::as_str), Some("tui01"));
+        assert_eq!(request.params.get("root.server_port").map(String::as_str), Some("3000"));
     }
 
     #[test]

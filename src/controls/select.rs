@@ -55,11 +55,7 @@ impl SelectControl {
     }
 
     fn render_collapsed(&self, area: Rect, buf: &mut Buffer, ctx: &RenderContext) {
-        let current = self
-            .options
-            .get(self.selected)
-            .map(|s| s.as_str())
-            .unwrap_or("-");
+        let current = self.options.get(self.selected).map(|s| s.as_str()).unwrap_or("-");
         let block = framed_block(ctx.selected, ctx.active, ctx.feedback);
         ratatui::widgets::Widget::render(block, area, buf);
 
@@ -74,11 +70,7 @@ impl SelectControl {
         let arrow_width = 1u16;
         let value_width = inner_width.saturating_sub(arrow_width + 2);
         let value = truncate_to_chars(current, value_width as usize);
-        let value_style = Style::default().fg(if ctx.active {
-            Color::Cyan
-        } else {
-            Color::White
-        });
+        let value_style = Style::default().fg(if ctx.active { Color::Cyan } else { Color::White });
         let arrow_style = Style::default().fg(if ctx.active {
             Color::Cyan
         } else if ctx.selected {
@@ -101,9 +93,7 @@ impl SelectControl {
         let rows = [
             self.selected.checked_sub(1),
             Some(self.selected),
-            self.selected
-                .checked_add(1)
-                .filter(|index| *index < self.options.len()),
+            self.selected.checked_add(1).filter(|index| *index < self.options.len()),
         ];
 
         for (offset, option_index) in rows.into_iter().enumerate() {
@@ -116,11 +106,7 @@ impl SelectControl {
                 .and_then(|index| self.options.get(index))
                 .map(String::as_str)
                 .unwrap_or("");
-            let style = if option_index == Some(self.selected) {
-                active_style
-            } else {
-                base_style
-            };
+            let style = if option_index == Some(self.selected) { active_style } else { base_style };
             let text_width = area.width.saturating_sub(4) as usize;
             let text = truncate_to_chars(text, text_width);
             let text_x = area.x + 1;

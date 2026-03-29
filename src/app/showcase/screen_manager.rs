@@ -7,17 +7,10 @@ pub(super) fn sync_panels(app: &mut ShowcaseApp) {
     app.content_panel.set_theme(app.theme);
     app.title_panel.set_text(app.copy.title_text.clone());
 
-    let selected = app
-        .menu
-        .selected_item()
-        .map(|item| item.label.as_str())
-        .unwrap_or("None");
+    let selected = app.menu.selected_item().map(|item| item.label.as_str()).unwrap_or("None");
 
-    let active = app
-        .screens
-        .get(app.active_screen)
-        .map(|screen| screen.title.as_str())
-        .unwrap_or("None");
+    let active =
+        app.screens.get(app.active_screen).map(|screen| screen.title.as_str()).unwrap_or("None");
 
     let focus_label = match app.focus {
         super::FocusTarget::Menu => "MenuComponent",

@@ -19,11 +19,7 @@ pub(super) fn poll_operation_results(app: &mut ShowcaseApp) {
 pub(super) fn submit_operation(app: &mut ShowcaseApp, request: OperationRequest) {
     app.executor.submit(OperationRequest {
         host: app.host.context().clone(),
-        cwd: app
-            .host
-            .working_dir()
-            .and_then(|path| path.to_str())
-            .map(str::to_string),
+        cwd: app.host.working_dir().and_then(|path| path.to_str()).map(str::to_string),
         env: app.host.shell().env().clone(),
         allowed_working_dirs: app
             .host

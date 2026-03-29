@@ -64,18 +64,10 @@ pub struct ActionOutcome {
 
 impl ActionOutcome {
     pub fn success(stdout: impl Into<String>) -> Self {
-        Self {
-            success: true,
-            stdout: stdout.into(),
-            stderr: String::new(),
-        }
+        Self { success: true, stdout: stdout.into(), stderr: String::new() }
     }
 
     pub fn failure(stderr: impl Into<String>) -> Self {
-        Self {
-            success: false,
-            stdout: String::new(),
-            stderr: stderr.into(),
-        }
+        Self { success: false, stdout: String::new(), stderr: stderr.into() }
     }
 }

@@ -9,34 +9,23 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone)]
 pub enum FrameworkLogger {
-    Enabled {
-        path: PathBuf,
-        file: Arc<Mutex<File>>,
-    },
+    Enabled { path: PathBuf, file: Arc<Mutex<File>> },
     Disabled,
 }
 
 impl FrameworkLogger {
     pub fn new(base_dir: impl AsRef<Path>) -> std::io::Result<Self> {
-        let path = base_dir
-            .as_ref()
-            .join(".tui01")
-            .join("logs")
-            .join("framework.log");
+        let path = base_dir.as_ref().join(".tui01").join("logs").join("framework.log");
         Self::from_path(path)
     }
 
     pub fn from_path(path: impl Into<PathBuf>) -> std::io::Result<Self> {
         let path = path.into();
-        let parent = path
-            .parent()
-            .ok_or_else(|| std::io::Error::other("invalid framework log path"))?;
+        let parent =
+            path.parent().ok_or_else(|| std::io::Error::other("invalid framework log path"))?;
         fs::create_dir_all(parent)?;
         let file = OpenOptions::new().create(true).append(true).open(&path)?;
-        Ok(Self::Enabled {
-            path,
-            file: Arc::new(Mutex::new(file)),
-        })
+        Ok(Self::Enabled { path, file: Arc::new(Mutex::new(file)) })
     }
 
     pub fn fallback() -> Self {
@@ -61,9 +50,7 @@ impl FrameworkLogger {
         let Self::Enabled { file, .. } = self else {
             return;
         };
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default();
+        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
         let line = format!(
             "{}.{:03} {:<5} {} {}\n",
             timestamp.as_secs(),

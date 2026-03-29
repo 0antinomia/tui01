@@ -30,12 +30,7 @@ impl LogOutputControl {
     const DEFAULT_WRAP_WIDTH: usize = 34;
 
     pub fn new(content: impl Into<String>) -> Self {
-        Self {
-            content: content.into(),
-            scroll_offset: 0,
-            file_source: None,
-            tail_lines: None,
-        }
+        Self { content: content.into(), scroll_offset: 0, file_source: None, tail_lines: None }
     }
 
     pub fn from_file(path: impl Into<PathBuf>) -> Self {
@@ -171,16 +166,15 @@ impl ControlTrait for LogOutputControl {
             return;
         }
 
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
-            .style(Style::default().fg(if ctx.active {
+        let block = Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).style(
+            Style::default().fg(if ctx.active {
                 Color::Cyan
             } else if ctx.selected {
                 Color::White
             } else {
                 Color::Gray
-            }));
+            }),
+        );
         let inner = block.inner(area);
         Widget::render(block, area, buf);
 
@@ -190,18 +184,8 @@ impl ControlTrait for LogOutputControl {
 
         let wrapped_lines = wrap_text_lines(&self.content, inner.width as usize);
         let mut y = inner.y;
-        for line in wrapped_lines
-            .into_iter()
-            .skip(self.scroll_offset)
-            .take(inner.height as usize)
-        {
-            buf.set_stringn(
-                inner.x,
-                y,
-                line.as_str(),
-                inner.width as usize,
-                log_line_style(&line),
-            );
+        for line in wrapped_lines.into_iter().skip(self.scroll_offset).take(inner.height as usize) {
+            buf.set_stringn(inner.x, y, line.as_str(), inner.width as usize, log_line_style(&line));
             y += 1;
         }
     }
@@ -247,10 +231,7 @@ mod tests {
     #[test]
     fn log_output_append_moves_scroll_to_bottom() {
         let mut control = LogOutputControl::new(
-            (0..24)
-                .map(|i| format!("line-{i}"))
-                .collect::<Vec<_>>()
-                .join("\n"),
+            (0..24).map(|i| format!("line-{i}")).collect::<Vec<_>>().join("\n"),
         );
         assert_eq!(control.scroll_offset, 0);
 

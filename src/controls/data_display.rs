@@ -21,17 +21,11 @@ pub struct DataDisplayControl {
 
 impl DataDisplayControl {
     pub fn new(value: impl Into<String>) -> Self {
-        Self {
-            value: value.into(),
-            dynamic: false,
-        }
+        Self { value: value.into(), dynamic: false }
     }
 
     pub fn new_dynamic(value: impl Into<String>) -> Self {
-        Self {
-            value: value.into(),
-            dynamic: true,
-        }
+        Self { value: value.into(), dynamic: true }
     }
 }
 
@@ -42,16 +36,15 @@ impl ControlTrait for DataDisplayControl {
             return;
         }
 
-        let border = Block::default()
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
-            .style(Style::default().fg(if ctx.active {
+        let border = Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).style(
+            Style::default().fg(if ctx.active {
                 Color::Cyan
             } else if ctx.selected {
                 Color::White
             } else {
                 Color::Gray
-            }));
+            }),
+        );
         Widget::render(border, area, buf);
 
         let icon = if self.dynamic { "◌" } else { "·" };
@@ -62,11 +55,7 @@ impl ControlTrait for DataDisplayControl {
             y,
             format!("{icon} {text}"),
             area.width.saturating_sub(2) as usize,
-            Style::default().fg(if self.dynamic {
-                Color::Cyan
-            } else {
-                Color::White
-            }),
+            Style::default().fg(if self.dynamic { Color::Cyan } else { Color::White }),
         );
     }
 

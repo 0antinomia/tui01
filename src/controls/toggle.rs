@@ -21,11 +21,7 @@ pub struct ToggleControl {
 
 impl ToggleControl {
     pub fn new(on: bool) -> Self {
-        Self {
-            on,
-            on_label: "ON".to_string(),
-            off_label: "OFF".to_string(),
-        }
+        Self { on, on_label: "ON".to_string(), off_label: "OFF".to_string() }
     }
 
     pub fn labels(mut self, on_label: impl Into<String>, off_label: impl Into<String>) -> Self {
@@ -60,11 +56,7 @@ fn draw_toggle_track(
     let inner_width = area.width.saturating_sub(2);
     let knob_width = (inner_width / 2).max(1);
     let inner_x = area.x + 1;
-    let knob_x = if on {
-        inner_x + inner_width.saturating_sub(knob_width)
-    } else {
-        inner_x
-    };
+    let knob_x = if on { inner_x + inner_width.saturating_sub(knob_width) } else { inner_x };
     let top_y = area.y;
     let middle_y = area.y + 1;
     let bottom_y = area.y + 2;
@@ -85,23 +77,13 @@ fn draw_toggle_track(
     for offset in 0..knob_width {
         buf.set_string(knob_x + offset, middle_y, " ", knob_style);
     }
-    buf.set_string(
-        area.x + area.width.saturating_sub(1),
-        middle_y,
-        "│",
-        border_style,
-    );
+    buf.set_string(area.x + area.width.saturating_sub(1), middle_y, "│", border_style);
 
     buf.set_string(area.x, bottom_y, "╰", border_style);
     for offset in 0..inner_width {
         buf.set_string(inner_x + offset, bottom_y, "─", border_style);
     }
-    buf.set_string(
-        area.x + area.width.saturating_sub(1),
-        bottom_y,
-        "╯",
-        border_style,
-    );
+    buf.set_string(area.x + area.width.saturating_sub(1), bottom_y, "╯", border_style);
 }
 
 impl ControlTrait for ToggleControl {
@@ -116,11 +98,7 @@ impl ControlTrait for ToggleControl {
             buf,
             Rect::new(area.x, track_y, area.width.min(10), 3),
             self.on,
-            if self.on {
-                Color::Cyan
-            } else {
-                Color::Rgb(120, 126, 132)
-            },
+            if self.on { Color::Cyan } else { Color::Rgb(120, 126, 132) },
             if ctx.active {
                 Color::Cyan
             } else if ctx.selected {

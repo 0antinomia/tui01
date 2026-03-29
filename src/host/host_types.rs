@@ -54,9 +54,7 @@ impl ExecutionPolicy {
     }
 
     pub fn allow_env_key(mut self, key: impl Into<String>) -> Self {
-        self.allowed_env_keys
-            .get_or_insert_with(HashSet::new)
-            .insert(key.into());
+        self.allowed_env_keys.get_or_insert_with(HashSet::new).insert(key.into());
         self
     }
 
@@ -208,8 +206,7 @@ impl RuntimeHost {
         name: impl Into<String>,
         factory: impl Fn() -> Box<dyn ControlTrait> + Send + Sync + 'static,
     ) {
-        self.control_registry
-            .register(name.into(), Arc::new(factory));
+        self.control_registry.register(name.into(), Arc::new(factory));
     }
 
     /// 获取控件注册表的引用。
@@ -370,18 +367,9 @@ mod tests {
             .insert_env("APP_ENV", "dev")
             .insert_env("APP_MODE", "test");
 
-        assert_eq!(
-            host.working_dir().and_then(|path| path.to_str()),
-            Some("/tmp/demo")
-        );
-        assert_eq!(
-            host.shell().env().get("APP_ENV").map(String::as_str),
-            Some("dev")
-        );
-        assert_eq!(
-            host.shell().env().get("APP_MODE").map(String::as_str),
-            Some("test")
-        );
+        assert_eq!(host.working_dir().and_then(|path| path.to_str()), Some("/tmp/demo"));
+        assert_eq!(host.shell().env().get("APP_ENV").map(String::as_str), Some("dev"));
+        assert_eq!(host.shell().env().get("APP_MODE").map(String::as_str), Some("test"));
         assert_eq!(
             host.framework_log_path().and_then(|path| path.to_str()),
             Some("/tmp/demo/.logs/framework.log")
@@ -393,11 +381,11 @@ mod tests {
     fn runtime_host_stores_shell_policy_and_event_hook() {
         let events = Arc::new(Mutex::new(Vec::<HostEvent>::new()));
         let capture = events.clone();
-        let host = RuntimeHost::new()
-            .set_shell_policy(ShellPolicy::RegisteredOnly)
-            .on_event(move |event| {
+        let host = RuntimeHost::new().set_shell_policy(ShellPolicy::RegisteredOnly).on_event(
+            move |event| {
                 capture.lock().unwrap().push(event);
-            });
+            },
+        );
 
         assert_eq!(host.shell_policy(), ShellPolicy::RegisteredOnly);
         host.event_hook().unwrap()(HostEvent::OperationStarted {
@@ -433,18 +421,8 @@ mod tests {
             .allow_env_key("APP_MODE");
 
         assert_eq!(host.execution_policy().allowed_working_dirs().len(), 1);
-        assert!(
-            host.execution_policy()
-                .allowed_env_keys()
-                .unwrap()
-                .contains("APP_ENV")
-        );
-        assert!(
-            host.execution_policy()
-                .allowed_env_keys()
-                .unwrap()
-                .contains("APP_MODE")
-        );
+        assert!(host.execution_policy().allowed_env_keys().unwrap().contains("APP_ENV"));
+        assert!(host.execution_policy().allowed_env_keys().unwrap().contains("APP_MODE"));
     }
 
     #[test]
