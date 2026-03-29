@@ -4,6 +4,11 @@ pub mod executor;
 pub mod framework_log;
 pub mod host_types;
 
-pub use executor::*;
-pub use framework_log::*;
-pub use host_types::*;
+pub use executor::{ActionContext, ActionOutcome};
+pub use host_types::{
+    ControlFactory, ControlRegistry, HostEvent, HostLogLevel, HostLogRecord, RuntimeHost,
+    ShellPolicy,
+};
+
+pub(crate) use executor::{ActionRegistry, OperationExecutor};
+pub(crate) use framework_log::FrameworkLogger;

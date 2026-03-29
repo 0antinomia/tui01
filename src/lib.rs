@@ -2,26 +2,22 @@
 //!
 //! 提供固定"田"字形四区布局的高层封装，快速将命令行工具 TUI 化。
 
-// Domain modules (D-01)
-pub mod app;
-pub mod components;
+// Internal implementation layers stay available within the crate without
+// advertising them as part of the external contract.
+mod app;
+mod components;
 pub mod controls;
 pub mod host;
-pub mod infra;
-pub mod runtime;
+mod infra;
+mod runtime;
 pub mod spec;
-
 pub mod theme;
-
-// Prelude stays at top level
 pub mod prelude;
 
-// Backward-compatible re-export aliases (D-06, D-08)
-// Old paths like tui01::builder::AppSpec continue to work
-pub use app::action;
-pub use app::showcase;
-pub use infra::event;
-pub use infra::tui;
-pub use spec::builder;
+// Crate-private bridges keep internal modules stable while the public facade
+// contracts around the canonical surface.
+pub(crate) use app::{action, showcase};
+pub(crate) use infra::{event, tui};
+pub(crate) use spec::builder;
 pub use spec::field;
 pub use spec::schema;

@@ -4,5 +4,6 @@ pub mod builder;
 pub mod field;
 pub mod schema;
 
-pub use builder::{AppSpec, AppValidationError, page, screen, section};
+// Schema types remain available as extension-layer access, while the builder
+// entry points are intentionally routed through the canonical prelude.
 pub use schema::{FieldSpec, PageSpec, SectionSpec};
