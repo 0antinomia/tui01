@@ -208,24 +208,24 @@ impl ContentPanel {
         self.block_control(self.runtime.selected_block).map(|control| match control {
             AnyControl::Builtin(BuiltinControl::TextInput(_)) => {
                 layout::SelectedControlKind::TextInput
-            }
+            },
             AnyControl::Builtin(BuiltinControl::NumberInput(_)) => {
                 layout::SelectedControlKind::NumberInput
-            }
+            },
             AnyControl::Builtin(BuiltinControl::Select(_)) => layout::SelectedControlKind::Select,
             AnyControl::Builtin(BuiltinControl::Toggle(_)) => layout::SelectedControlKind::Toggle,
             AnyControl::Builtin(BuiltinControl::ActionButton(_)) => {
                 layout::SelectedControlKind::ActionButton
-            }
+            },
             AnyControl::Builtin(BuiltinControl::StaticData(_)) => {
                 layout::SelectedControlKind::StaticData
-            }
+            },
             AnyControl::Builtin(BuiltinControl::DynamicData(_)) => {
                 layout::SelectedControlKind::DynamicData
-            }
+            },
             AnyControl::Builtin(BuiltinControl::LogOutput(_)) => {
                 layout::SelectedControlKind::LogOutput
-            }
+            },
             AnyControl::Custom(_) => layout::SelectedControlKind::Custom,
         })
     }
@@ -499,7 +499,7 @@ mod tests {
         match &panel.blueprint().sections[0].blocks[0].control {
             super::AnyControl::Builtin(super::BuiltinControl::TextInput(control)) => {
                 assert_eq!(control.value, "demox")
-            }
+            },
             _ => panic!("expected text input"),
         }
     }
@@ -515,7 +515,7 @@ mod tests {
         match &panel.blueprint().sections[0].blocks[1].control {
             super::AnyControl::Builtin(super::BuiltinControl::Toggle(control)) => {
                 assert!(!control.on)
-            }
+            },
             _ => panic!("expected toggle"),
         }
     }
@@ -534,7 +534,7 @@ mod tests {
         match &panel.blueprint().sections[1].blocks[1].control {
             super::AnyControl::Builtin(super::BuiltinControl::NumberInput(control)) => {
                 assert_eq!(control.value, "80809")
-            }
+            },
             _ => panic!("expected number input"),
         }
     }
@@ -552,7 +552,7 @@ mod tests {
         match &panel.blueprint().sections[1].blocks[0].control {
             super::AnyControl::Builtin(super::BuiltinControl::Select(control)) => {
                 assert_eq!(control.selected, 0)
-            }
+            },
             _ => panic!("expected select"),
         }
         assert!(!panel.is_control_active());
@@ -629,7 +629,7 @@ mod tests {
         match &panel.blueprint().sections[0].blocks[1].control {
             super::AnyControl::Builtin(super::BuiltinControl::LogOutput(log)) => {
                 assert!(log.content.contains("done"))
-            }
+            },
             _ => panic!("expected log output"),
         }
     }
@@ -662,7 +662,7 @@ mod tests {
                 assert!(log.content.contains("previous line"));
                 assert!(log.content.contains("[success]"));
                 assert!(log.content.contains("done"));
-            }
+            },
             _ => panic!("expected log output"),
         }
     }

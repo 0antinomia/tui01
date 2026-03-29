@@ -1,107 +1,150 @@
 # Getting Started
 
-## 先跑起来
+## Run The Canonical Example
 
-先运行推荐样板：
+Start with the one official runnable example:
 
 ```bash
 cargo run --example host_template
 ```
 
-仓库根目录下的：
+Use [../examples/host_template.rs](../examples/host_template.rs) as the source of truth for the reset-era integration pattern.
 
-```bash
-cargo run
-```
+## Recommended Downstream Layout
 
-只用于框架仓库自身的默认应用，不作为推荐宿主接入样板。
-
-## 再接入自己的项目
-
-推荐顺序：
-
-1. 先参考并复制 [examples/host_template.rs](../examples/host_template.rs) 的装配方式
-2. 在 `src/host.rs` 里收紧宿主策略
-3. 在 `src/actions.rs` 里注册动作
-4. 在 `src/app.rs` 里定义页面
-5. 在 `src/main.rs` 里完成 `try_into_showcase_app_with_host(host)` 装配
-
-推荐目录：
+For a real application, keep the wiring compact and explicit:
 
 ```text
-your-app/
+project root
 ├── Cargo.toml
-├── src/
-│   ├── main.rs
-│   ├── host.rs
-│   ├── actions.rs
-│   └── app.rs
+└── src
+    ├── app.rs
+    ├── actions.rs
+    ├── host.rs
+    └── main.rs
 ```
 
-## 推荐写法
+- `actions.rs`: action names and business logic
+- `host.rs`: `RuntimeHost` construction, policy, hooks, and allowlists
+- `app.rs`: `AppSpec` screens, pages, sections, and fields
+- `main.rs`: assemble the app and start your runtime
 
-宿主代码优先只使用：
+## Step 1: Build RuntimeHost First
 
-- `tui01::prelude`
-- `tui01::field`
-- `RuntimeHost`
+Create `RuntimeHost` before authoring side-effectful fields so the allowed execution surface is clear.
 
-只有在这些场景下再额外引入进阶能力：
+Recommended defaults:
 
-- 自定义控件：`ControlRegistry` / `register_control()`
-- 主题定制：`Theme`
-- 布局替换：`LayoutStrategy`
+- prefer `registered_action` over raw shell commands
+- start from `ShellPolicy::RegisteredOnly`
+- set a working directory explicitly
+- add env allowlists before enabling real commands
+- attach logger and event hooks before shipping side effects
 
-推荐启动顺序：
+```rust
+use tui01::host::ActionOutcome;
+use tui01::prelude::{HostLogLevel, RuntimeHost, ShellPolicy};
 
-1. 构建 `RuntimeHost`
-2. 通过 `prelude + field` 构建 `AppSpec`
-3. `try_into_showcase_app_with_host(host)`
-4. 进入事件循环
+fn build_host() -> RuntimeHost {
+    let mut host = RuntimeHost::new();
+    host.register_action_handler("sync_workspace", |context| async move {
+        let project = context
+            .params
+            .get("project_name")
+            .cloned()
+            .unwrap_or_else(|| "demo".to_string());
+        ActionOutcome::success(format!("synced {project}"))
+    });
 
-当前源码结构已经拆成域模块：
+    let mut host = host
+        .set_context("project_root", ".")
+        .set_working_dir(".")
+        .allow_working_dir(".")
+        .insert_env("APP_ENV", "dev")
+        .allow_env_key("APP_ENV")
+        .set_shell_policy(ShellPolicy::RegisteredOnly);
 
-- `spec/`
-- `runtime/`
-- `controls/`
-- `components/`
-- `host/`
-- `app/`
-- `infra/`
+    host.set_logger(|record| {
+        let level = match record.level {
+            HostLogLevel::Debug => "debug",
+            HostLogLevel::Info => "info",
+            HostLogLevel::Warn => "warn",
+            HostLogLevel::Error => "error",
+        };
+        eprintln!("[{level}] {}", record.message);
+    });
+    host.set_event_hook(|event| eprintln!("{event:?}"));
 
-## 默认建议
+    host
+}
+```
 
-- 动作优先用 `registered_action`
-- 裸 shell 只用于本地快速原型
-- 默认从 `ShellPolicy::RegisteredOnly` 开始
-- 先用内置字段和默认四分区布局，等页面稳定后再考虑自定义控件和主题
-- host 侧至少配置：
-  - `project_root` 这类基础 context
-  - working dir
-  - env 白名单
-  - logger
-  - event hook
+## Step 2: Define AppSpec With Prelude + Field
 
-## 接入检查清单
+Keep the app definition on the canonical consumer surface: `tui01::prelude` and `tui01::field`.
 
-- 页面里所有 `result_target` 都存在且指向日志控件
-- 所有 `registered_action` 都已在宿主注册
-- 如果用了 `field::custom(...)`，对应控件已经在 `RuntimeHost` 上注册
-- host policy 不允许未注册 shell
-- host working dir 在白名单内
-- host env key 在白名单内
-- `AppSpec` 和宿主注册动作已经过 `validate()` / `try_into_showcase_app_with_host(...)` 校验
+```rust
+use tui01::field;
+use tui01::prelude::{AppSpec, page, screen, section};
 
-## 适用场景
+fn build_spec() -> AppSpec {
+    AppSpec::new().screen(
+        screen(
+            "Workspace",
+            page("Workspace")
+                .section(
+                    section("Config")
+                        .field(field::text_id("Project", "demo", "Project name", "project_name")),
+                )
+                .section(
+                    section("Actions").field(
+                        field::refresh_registered_to_log(
+                            "Sync workspace",
+                            "Sync",
+                            "sync_action",
+                            "sync_workspace",
+                            "workspace_log",
+                        ),
+                    ),
+                )
+                .section(
+                    section("Output").field(
+                        field::log_id("Output", "Waiting for results", "workspace_log"),
+                    ),
+                ),
+        ),
+    )
+}
+```
 
-适合：
+## Step 3: Attach The Host
 
-- 内部工具面板
-- 配置驱动的运维/开发 TUI
-- 需要宿主动作注册和执行约束的命令行工具
+Once your `RuntimeHost` and `AppSpec` are ready, attach them with `try_into_showcase_app_with_host(host)`.
 
-当前不建议直接用于：
+```rust
+let host = build_host();
+let mut app = build_spec().try_into_showcase_app_with_host(host)?;
+```
 
-- 需要复杂表格/树视图的大型终端应用
-- 需要稳定公开插件生态的长期平台
-- 需要完整国际化和主题系统的产品型 TUI
+## Step 4: Validate Registered Actions Before Running
+
+Before entering your runtime loop, verify that every `registered_action` used in the spec exists on the host:
+
+```rust
+app.validate_registered_actions()?;
+```
+
+This catches missing host registrations before users trigger real behavior.
+
+## Step 5: Move From Example To Production
+
+As you replace the example logic with real work:
+
+- keep `registered_action` as the primary execution path
+- narrow cwd and env allowlists to what the action needs
+- log host activity so failures are visible during integration
+- keep event hooks wired while you validate operational behavior
+
+## Upgrading Older Integrations
+
+If you are migrating older `tui01` code, leave the newcomer path here and switch to [docs/MIGRATION.md](MIGRATION.md) instead of mixing upgrade work into this flow.

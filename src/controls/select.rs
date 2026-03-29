@@ -41,7 +41,7 @@ impl SelectControl {
                 } else {
                     false
                 }
-            }
+            },
             Key::Right | Key::Down | Key::Char('j') | Key::Char('l') => {
                 if self.selected + 1 < self.options.len() {
                     self.selected += 1;
@@ -49,7 +49,7 @@ impl SelectControl {
                 } else {
                     false
                 }
-            }
+            },
             _ => false,
         }
     }

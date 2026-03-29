@@ -29,7 +29,7 @@ impl NumberInputControl {
             Key::Char(ch) if ch.is_ascii_digit() => {
                 self.value.push(ch);
                 true
-            }
+            },
             Key::Backspace => self.value.pop().is_some(),
             _ => false,
         }

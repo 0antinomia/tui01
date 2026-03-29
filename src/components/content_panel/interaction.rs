@@ -43,17 +43,17 @@ pub(super) fn activate_panel_selected_control(
             }
             panel.control_active = true;
             None
-        }
+        },
         Some(SelectedControlKind::Toggle) => {
             panel.control_active = false;
             panel.clear_selected_snapshot();
             toggle_selected_control(panel, operation_id, screen_index)
-        }
+        },
         Some(SelectedControlKind::ActionButton) => {
             panel.control_active = false;
             panel.clear_selected_snapshot();
             start_selected_action(panel, operation_id, screen_index)
-        }
+        },
         Some(SelectedControlKind::StaticData | SelectedControlKind::DynamicData) | None => None,
         Some(SelectedControlKind::Custom) => {
             let is_editable =
@@ -76,7 +76,7 @@ pub(super) fn activate_panel_selected_control(
             } else {
                 None
             }
-        }
+        },
     }
 }
 
@@ -254,28 +254,28 @@ fn selected_control_kind(panel: &ContentPanel) -> Option<SelectedControlKind> {
     panel.block_control(panel.runtime.selected_block).map(|control| match control {
         AnyControl::Builtin(crate::controls::BuiltinControl::TextInput(_)) => {
             SelectedControlKind::TextInput
-        }
+        },
         AnyControl::Builtin(crate::controls::BuiltinControl::NumberInput(_)) => {
             SelectedControlKind::NumberInput
-        }
+        },
         AnyControl::Builtin(crate::controls::BuiltinControl::Select(_)) => {
             SelectedControlKind::Select
-        }
+        },
         AnyControl::Builtin(crate::controls::BuiltinControl::Toggle(_)) => {
             SelectedControlKind::Toggle
-        }
+        },
         AnyControl::Builtin(crate::controls::BuiltinControl::ActionButton(_)) => {
             SelectedControlKind::ActionButton
-        }
+        },
         AnyControl::Builtin(crate::controls::BuiltinControl::StaticData(_)) => {
             SelectedControlKind::StaticData
-        }
+        },
         AnyControl::Builtin(crate::controls::BuiltinControl::DynamicData(_)) => {
             SelectedControlKind::DynamicData
-        }
+        },
         AnyControl::Builtin(crate::controls::BuiltinControl::LogOutput(_)) => {
             SelectedControlKind::LogOutput
-        }
+        },
         AnyControl::Custom(_) => SelectedControlKind::Custom,
     })
 }

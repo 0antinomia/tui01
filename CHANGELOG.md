@@ -2,16 +2,19 @@
 
 ## 0.2.0
 
+Reset release for downstream users adopting the new public contract. This affects teams upgrading older integrations that depended on compatibility aliases, root event/tui entry paths, or the bare `cargo run` flow. The supported consumer surface is now centered on `tui01::prelude`, `tui01::field`, and `RuntimeHost`. Use [docs/MIGRATION.md](docs/MIGRATION.md) before upgrading existing integrations.
+
+### Breaking
+
+- Removed compatibility aliases such as `tui01::builder` from the public guidance path. Import canonical builder helpers through `tui01::prelude` instead.
+- Removed legacy root-level public entry paths such as `tui01::event` and `tui01::tui` from the supported consumer contract.
+- Removed bare `cargo run` as the recommended entry path. Run `cargo run --example host_template` for the canonical reset-era example.
+- Older integrations should migrate to `tui01::prelude`, `tui01::field`, and `RuntimeHost` with the old-to-new mappings in [docs/MIGRATION.md](docs/MIGRATION.md).
+
 ### Changed
 
-- 完成一轮纯架构重构，源码按域模块拆分为 `spec / runtime / controls / components / host / app / infra`
-- 引入 `ControlTrait`、`AnyControl` 和 `ControlRegistry`，支持宿主应用注册自定义控件
-- 将控件实现按类型拆分到 `src/controls/`，降低新增控件时的改动范围
-- 将主题与布局扩展点正式纳入公开能力，提供 `Theme`、`RenderContext` 和 `LayoutStrategy`
-- 将应用壳层、内容区和执行器按职责拆分为子模块，保留原有行为与交互语义
-- README 和接入文档已同步更新到重构后的真实结构与推荐入口
-- 项目工具链切换到 Rust 2024 edition，并通过 `rust-toolchain.toml` 固定构建环境
-- 增加 `rustfmt.toml`，统一代码格式化行为
+- Public onboarding and versioning docs now route upgrade work through [docs/MIGRATION.md](docs/MIGRATION.md) and keep the canonical example as the only official runnable entrypoint.
+- Release-facing guidance now documents the reset as a breaking contract update instead of a transitional compatibility story.
 
 ## 0.1.0
 

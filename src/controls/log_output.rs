@@ -91,7 +91,7 @@ impl LogOutputControl {
                 } else {
                     false
                 }
-            }
+            },
             Key::Down | Key::Char('j') => {
                 if self.scroll_offset < max_offset {
                     self.scroll_offset += 1;
@@ -99,7 +99,7 @@ impl LogOutputControl {
                 } else {
                     false
                 }
-            }
+            },
             _ => false,
         }
     }
@@ -118,11 +118,11 @@ impl LogOutputControl {
                 let lines = content.lines().map(ToString::to_string).collect::<Vec<_>>();
                 self.content = apply_tail_limit(lines, self.tail_lines).join("\n");
                 self.scroll_to_bottom();
-            }
+            },
             Err(err) => {
                 self.content = format!("failed to read log file\n{}\n{}", path.display(), err);
                 self.scroll_to_bottom();
-            }
+            },
         }
     }
 

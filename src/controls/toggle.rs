@@ -35,7 +35,7 @@ impl ToggleControl {
             Key::Left | Key::Right | Key::Char('h') | Key::Char('l') | Key::Enter => {
                 self.on = !self.on;
                 true
-            }
+            },
             _ => false,
         }
     }

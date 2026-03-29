@@ -259,23 +259,23 @@ impl Component for MenuComponent {
                 Key::Char('K') => {
                     self.state.previous_page();
                     return Action::Noop;
-                }
+                },
                 Key::Char('J') => {
                     self.state.next_page();
                     return Action::Noop;
-                }
+                },
                 Key::Up | Key::Char('k') => {
                     self.state.select_previous();
                     return Action::Noop;
-                }
+                },
                 Key::Down | Key::Char('j') => {
                     self.state.select_next();
                     return Action::Noop;
-                }
+                },
                 Key::Enter => {
                     return Action::MenuSelect(self.state.selected_index());
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
 

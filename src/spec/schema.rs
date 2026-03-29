@@ -305,30 +305,30 @@ impl FieldSpec {
                 },
                 ControlSpec::Select { options, selected } => {
                     RuntimeControl::Select { options: options.clone(), selected: *selected }
-                }
+                },
                 ControlSpec::Toggle { on } => RuntimeControl::Toggle { on: *on },
                 ControlSpec::ActionButton { label } => {
                     RuntimeControl::ActionButton { label: label.clone() }
-                }
+                },
                 ControlSpec::RefreshButton { label } => {
                     RuntimeControl::RefreshButton { label: label.clone() }
-                }
+                },
                 ControlSpec::StaticData { value } => {
                     RuntimeControl::StaticData { value: value.clone() }
-                }
+                },
                 ControlSpec::DynamicData { value } => {
                     RuntimeControl::DynamicData { value: value.clone() }
-                }
+                },
                 ControlSpec::LogOutput { content, file_source, tail_lines } => {
                     RuntimeControl::LogOutput {
                         content: content.clone(),
                         file_source: file_source.clone(),
                         tail_lines: *tail_lines,
                     }
-                }
+                },
                 ControlSpec::Custom { control_name } => {
                     RuntimeControl::Custom { control_name: control_name.clone() }
-                }
+                },
             },
             height_units: self.height_units,
             operation: self.operation.clone().map(|operation| RuntimeOperation {

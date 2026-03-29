@@ -155,7 +155,7 @@ impl OperationExecutor {
                         logger(record);
                     }
                     ActionOutcome::failure("inline shell commands are disabled by host policy")
-                }
+                },
                 OperationSource::ShellCommand(command) => {
                     shell::run_shell_command(
                         command.clone(),
@@ -163,7 +163,7 @@ impl OperationExecutor {
                         request.env.clone(),
                     )
                     .await
-                }
+                },
                 OperationSource::RegisteredAction(name) => match registered {
                     Some(RegisteredAction::ShellTemplate(_))
                         if shell_policy == ShellPolicy::Disabled =>
@@ -183,7 +183,7 @@ impl OperationExecutor {
                         ActionOutcome::failure(
                             "registered shell actions are disabled by host policy",
                         )
-                    }
+                    },
                     Some(RegisteredAction::ShellTemplate(template)) => {
                         let command = shell::render_command_template(
                             &template,
@@ -192,7 +192,7 @@ impl OperationExecutor {
                         );
                         shell::run_shell_command(command, request.cwd.clone(), request.env.clone())
                             .await
-                    }
+                    },
                     Some(RegisteredAction::Handler(handler)) => handler(context).await,
                     None => ActionOutcome::failure(format!("unknown action: {name}")),
                 },

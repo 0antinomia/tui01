@@ -263,21 +263,21 @@ impl ShowcaseApp {
         let error_msg = match error {
             SizeError::Small => {
                 format!("终端太小（最小需要 {}x{}）", MIN_WIDTH, MIN_HEIGHT)
-            }
+            },
             SizeError::Narrow => {
                 format!(
                     "终端过窄（宽高比需 >= {:.1}，当前: {:.2}）",
                     MIN_ASPECT_RATIO,
                     Self::current_aspect_ratio()
                 )
-            }
+            },
             SizeError::Wide => {
                 format!(
                     "终端过宽（宽高比需 <= {:.1}，当前: {:.2}）",
                     MAX_ASPECT_RATIO,
                     Self::current_aspect_ratio()
                 )
-            }
+            },
         };
 
         let widget = Paragraph::new(error_msg)
@@ -409,7 +409,7 @@ mod tests {
         match &app.content_panel.blueprint().sections[0].blocks[0].control {
             AnyControl::Builtin(BuiltinControl::Toggle(control)) => {
                 assert!(control.on)
-            }
+            },
             _ => panic!("expected toggle"),
         }
     }
@@ -507,7 +507,7 @@ mod tests {
         match &app.content_panel.blueprint().sections[0].blocks[0].control {
             AnyControl::Builtin(BuiltinControl::TextInput(control)) => {
                 assert_eq!(control.value, "h")
-            }
+            },
             _ => panic!("expected text input"),
         }
     }

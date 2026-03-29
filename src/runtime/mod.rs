@@ -460,26 +460,26 @@ impl ContentBlock {
         let mut block = match value.control {
             RuntimeControl::TextInput { value: field_value, placeholder } => {
                 ContentBlock::text_input(value.label, field_value, placeholder)
-            }
+            },
             RuntimeControl::NumberInput { value: field_value, placeholder } => {
                 ContentBlock::number_input(value.label, field_value, placeholder)
-            }
+            },
             RuntimeControl::Select { options, selected } => {
                 ContentBlock::select(value.label, options, selected)
-            }
+            },
             RuntimeControl::Toggle { on } => ContentBlock::toggle(value.label, on),
             RuntimeControl::ActionButton { label } => {
                 ContentBlock::action_button(value.label, label)
-            }
+            },
             RuntimeControl::RefreshButton { label } => {
                 ContentBlock::refresh_button(value.label, label)
-            }
+            },
             RuntimeControl::StaticData { value: field_value } => {
                 ContentBlock::static_data(value.label, field_value)
-            }
+            },
             RuntimeControl::DynamicData { value: field_value } => {
                 ContentBlock::dynamic_data(value.label, field_value)
-            }
+            },
             RuntimeControl::LogOutput { content, file_source, tail_lines } => {
                 let mut block = ContentBlock::log_output(value.label, content);
                 if let Some(path) = file_source {
@@ -496,7 +496,7 @@ impl ContentBlock {
                     }
                 }
                 block
-            }
+            },
             RuntimeControl::Custom { control_name } => {
                 let control = registry
                     .and_then(|r| r.create(&control_name))
@@ -510,7 +510,7 @@ impl ContentBlock {
                     height_units: 1,
                     operation: None,
                 }
-            }
+            },
         };
 
         if let Some(id) = value.id {
@@ -571,7 +571,7 @@ mod tests {
         match &blueprint.sections[0].blocks[0].control {
             AnyControl::Builtin(BuiltinControl::TextInput(control)) => {
                 assert_eq!(control.value, "tui01")
-            }
+            },
             _ => panic!("expected text input"),
         }
         assert!(blueprint.sections[0].blocks[0].operation.is_some());

@@ -10,10 +10,10 @@ mod components;
 pub mod controls;
 pub mod host;
 mod infra;
+pub mod prelude;
 mod runtime;
 pub mod spec;
 pub mod theme;
-pub mod prelude;
 
 // Keep internal module paths stable without widening the external facade again.
 pub(crate) use app::{action, showcase};

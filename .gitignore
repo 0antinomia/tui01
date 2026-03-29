@@ -1,5 +1,6 @@
 # Build
 /target
+/fixtures/downstream_host/target/
 **/*.rs.bk
 *.pdb
 

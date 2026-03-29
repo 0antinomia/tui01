@@ -111,7 +111,7 @@ pub(super) fn feedback_accent(feedback: ControlFeedback, selected: bool, active:
             } else {
                 Color::Gray
             }
-        }
+        },
     }
 }
 
@@ -121,7 +121,7 @@ pub(super) fn render_feedback_marker(buf: &mut Buffer, area: Rect, feedback: Con
         ControlFeedback::Running(frame) => {
             const FRAMES: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
             (FRAMES[frame % FRAMES.len()], Color::Cyan)
-        }
+        },
         ControlFeedback::Success => ("✓", Color::Green),
         ControlFeedback::Failure => ("✗", Color::Red),
     };

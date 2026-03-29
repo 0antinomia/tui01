@@ -51,13 +51,13 @@ impl std::fmt::Display for AppValidationError {
             Self::DuplicateFieldId(id) => write!(f, "duplicate field id: {id}"),
             Self::MissingResultTarget { source_field, target_id } => {
                 write!(f, "field {source_field} references missing result target id: {target_id}")
-            }
+            },
             Self::InvalidResultTarget { source_field, target_id } => {
                 write!(f, "field {source_field} references non-log result target id: {target_id}")
-            }
+            },
             Self::UnknownRegisteredAction { source_field, action } => {
                 write!(f, "field {source_field} references unknown registered action: {action}")
-            }
+            },
         }
     }
 }
@@ -169,14 +169,14 @@ impl AppSpec {
                                         source_field,
                                         target_id: target_id.clone(),
                                     });
-                                }
+                                },
                                 Some(false) => {
                                     return Err(AppValidationError::InvalidResultTarget {
                                         source_field,
                                         target_id: target_id.clone(),
                                     });
-                                }
-                                Some(true) => {}
+                                },
+                                Some(true) => {},
                             }
                         }
 

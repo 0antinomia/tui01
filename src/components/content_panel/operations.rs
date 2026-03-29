@@ -64,10 +64,10 @@ pub(super) fn start_operation(
         source: match command.source {
             OperationSource::ShellCommand(command) => {
                 ExecutorOperationSource::ShellCommand(command)
-            }
+            },
             OperationSource::RegisteredAction(action) => {
                 ExecutorOperationSource::RegisteredAction(action)
-            }
+            },
         },
         params: operation_params(panel),
         host: HashMap::new(),

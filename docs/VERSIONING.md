@@ -15,7 +15,7 @@
 
 - 小版本可能带破坏性调整
 - patch 版本应优先只修复问题
-- 新增宿主能力时，优先保留旧入口一段过渡期
+- 当前 reset 以一个规范化消费者路径为准，不再承诺为旧入口保留过渡层
 
 ## 当前优先级
 
@@ -28,8 +28,8 @@
 
 这里的“宿主接入路径”特指：
 
-- `prelude`
-- `field`
+- `tui01::prelude`
+- `tui01::field`
 - `RuntimeHost`
 
 暂时不优先保证：
@@ -37,16 +37,23 @@
 - 宽范围 UI 组件 API 完全稳定
 - 所有内部模块路径长期不变
 - `spec / runtime / controls / components / host / app / infra` 的细节长期不变
-- 兼容别名路径（如 `tui01::builder`）长期不变
+- 历史兼容别名路径长期不变
 
 ## 对外建议
 
 如果你准备在真实项目里依赖 `tui01`：
 
 - 固定 crate 版本
-- 升级前先读 [CHANGELOG.md](../CHANGELOG.md)
+- 升级旧集成前先读 [docs/MIGRATION.md](./MIGRATION.md)
+- 关注 breaking reset 说明时，再读 [CHANGELOG.md](../CHANGELOG.md)
 - 避免依赖未在 README 文档化的内部模块细节
-- 优先使用 `prelude`、`field`、`RuntimeHost`，不要直接绑定内部目录结构
+- 优先使用 `tui01::prelude`、`tui01::field`、`RuntimeHost`，不要直接绑定内部目录结构
+
+## 升级策略
+
+- 这次 reset 明确偏向一个 canonical consumer path，而不是维持多条历史入口并行。
+- 旧版本接入如果使用过兼容别名、根级事件入口或默认二进制启动方式，升级前应先对照 [docs/MIGRATION.md](./MIGRATION.md) 完成路径替换。
+- 版本级 breaking 说明统一记录在 [CHANGELOG.md](../CHANGELOG.md)。
 
 ## 进入 1.0 之前应满足
 
