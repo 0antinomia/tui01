@@ -139,11 +139,11 @@ impl LogOutputControl {
 }
 
 fn apply_tail_limit(mut lines: Vec<String>, tail_lines: Option<usize>) -> Vec<String> {
-    if let Some(limit) = tail_lines {
-        if lines.len() > limit {
-            let drain = lines.len() - limit;
-            lines.drain(0..drain);
-        }
+    if let Some(limit) = tail_lines
+        && lines.len() > limit
+    {
+        let drain = lines.len() - limit;
+        lines.drain(0..drain);
     }
     lines
 }
@@ -231,7 +231,7 @@ impl ControlTrait for LogOutputControl {
     }
 
     fn box_eq(&self, other: &dyn ControlTrait) -> bool {
-        other.as_any().downcast_ref::<Self>().map_or(false, |o| self == o)
+        other.as_any().downcast_ref::<Self>() == Some(self)
     }
 
     fn as_any(&self) -> &dyn Any {

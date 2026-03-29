@@ -54,12 +54,7 @@ impl SelectControl {
         }
     }
 
-    fn render_collapsed(
-        &self,
-        area: Rect,
-        buf: &mut Buffer,
-        ctx: &RenderContext,
-    ) {
+    fn render_collapsed(&self, area: Rect, buf: &mut Buffer, ctx: &RenderContext) {
         let current = self
             .options
             .get(self.selected)
@@ -79,7 +74,11 @@ impl SelectControl {
         let arrow_width = 1u16;
         let value_width = inner_width.saturating_sub(arrow_width + 2);
         let value = truncate_to_chars(current, value_width as usize);
-        let value_style = Style::default().fg(if ctx.active { Color::Cyan } else { Color::White });
+        let value_style = Style::default().fg(if ctx.active {
+            Color::Cyan
+        } else {
+            Color::White
+        });
         let arrow_style = Style::default().fg(if ctx.active {
             Color::Cyan
         } else if ctx.selected {
@@ -94,12 +93,7 @@ impl SelectControl {
         render_feedback_marker(buf, area, ctx.feedback);
     }
 
-    fn render_expanded(
-        &self,
-        area: Rect,
-        buf: &mut Buffer,
-        ctx: &RenderContext,
-    ) {
+    fn render_expanded(&self, area: Rect, buf: &mut Buffer, ctx: &RenderContext) {
         let border = feedback_accent(ctx.feedback, ctx.selected, true);
         let base_style = Style::default().fg(Color::Gray);
         let active_style = Style::default().fg(border);
@@ -180,7 +174,7 @@ impl ControlTrait for SelectControl {
     }
 
     fn box_eq(&self, other: &dyn ControlTrait) -> bool {
-        other.as_any().downcast_ref::<Self>().map_or(false, |o| self == o)
+        other.as_any().downcast_ref::<Self>() == Some(self)
     }
 
     fn as_any(&self) -> &dyn Any {

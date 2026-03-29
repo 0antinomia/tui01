@@ -1,7 +1,7 @@
 //! 通用的四分区展示应用壳层。
 
-mod screen_manager;
 mod operation_poll;
+mod screen_manager;
 mod tea_core;
 
 use crate::builder::AppValidationError;
@@ -10,8 +10,8 @@ use crate::components::{
     TitlePanel,
 };
 use crate::event::Event;
-use crate::host::{ActionRegistry, OperationExecutor, RuntimeHost};
 use crate::host::FrameworkLogger;
+use crate::host::{ActionRegistry, OperationExecutor, RuntimeHost};
 use crate::runtime::ContentBlueprint;
 use crate::schema::PageSpec;
 use crate::theme::{LayoutStrategy, Theme};
@@ -215,17 +215,15 @@ impl ShowcaseApp {
                         .clone()
                         .unwrap_or_else(|| format!("{}:{}", screen.title, block.label));
 
-                    if let Some(operation) = &block.operation {
-                        if let crate::runtime::OperationSource::RegisteredAction(action) =
+                    if let Some(operation) = &block.operation
+                        && let crate::runtime::OperationSource::RegisteredAction(action) =
                             &operation.source
-                        {
-                            if !self.host.has_action(action) {
-                                return Err(AppValidationError::UnknownRegisteredAction {
-                                    source_field,
-                                    action: action.clone(),
-                                });
-                            }
-                        }
+                        && !self.host.has_action(action)
+                    {
+                        return Err(AppValidationError::UnknownRegisteredAction {
+                            source_field,
+                            action: action.clone(),
+                        });
                     }
                 }
             }
@@ -312,14 +310,19 @@ fn framework_logger_for_host(host: &RuntimeHost) -> FrameworkLogger {
 #[cfg(test)]
 mod tests {
     use super::{FocusTarget, ShowcaseApp, ShowcaseCopy, ShowcaseScreen};
-    use crate::event::{Event, Key};
     use crate::controls::{AnyControl, BuiltinControl};
+    use crate::event::{Event, Key};
     use crate::runtime::{ContentBlock, ContentBlueprint, ContentSection};
     fn screen(title: &'static str, text: &'static str) -> ShowcaseScreen {
         ShowcaseScreen {
             title: title.to_string(),
-            content: ContentBlueprint::new(title).with_sections(vec![ContentSection::new("概览")
-                .with_blocks(vec![ContentBlock::text_input(text, "", "输入值")])]),
+            content: ContentBlueprint::new(title).with_sections(vec![
+                ContentSection::new("概览").with_blocks(vec![ContentBlock::text_input(
+                    text,
+                    "",
+                    "输入值",
+                )]),
+            ]),
         }
     }
 
@@ -373,13 +376,12 @@ mod tests {
             },
             vec![ShowcaseScreen {
                 title: "One".to_string(),
-                content: ContentBlueprint::new("One").with_sections(vec![ContentSection::new(
-                    "概览",
-                )
-                .with_blocks(vec![
-                    ContentBlock::toggle("A", true),
-                    ContentBlock::select("B", ["One", "Two"], 0),
-                ])]),
+                content: ContentBlueprint::new("One").with_sections(vec![
+                    ContentSection::new("概览").with_blocks(vec![
+                        ContentBlock::toggle("A", true),
+                        ContentBlock::select("B", ["One", "Two"], 0),
+                    ]),
+                ]),
             }],
         );
 
@@ -400,9 +402,9 @@ mod tests {
             },
             vec![ShowcaseScreen {
                 title: "One".to_string(),
-                content: ContentBlueprint::new("One")
-                    .with_sections(vec![ContentSection::new("概览")
-                        .with_blocks(vec![ContentBlock::toggle("A", false)])]),
+                content: ContentBlueprint::new("One").with_sections(vec![
+                    ContentSection::new("概览").with_blocks(vec![ContentBlock::toggle("A", false)]),
+                ]),
             }],
         );
 
@@ -436,9 +438,13 @@ mod tests {
             },
             vec![ShowcaseScreen {
                 title: "One".to_string(),
-                content: ContentBlueprint::new("One")
-                    .with_sections(vec![ContentSection::new("概览")
-                        .with_blocks(vec![ContentBlock::select("B", ["One", "Two"], 0)])]),
+                content: ContentBlueprint::new("One").with_sections(vec![
+                    ContentSection::new("概览").with_blocks(vec![ContentBlock::select(
+                        "B",
+                        ["One", "Two"],
+                        0,
+                    )]),
+                ]),
             }],
         );
 
@@ -460,9 +466,13 @@ mod tests {
             },
             vec![ShowcaseScreen {
                 title: "One".to_string(),
-                content: ContentBlueprint::new("One")
-                    .with_sections(vec![ContentSection::new("概览")
-                        .with_blocks(vec![ContentBlock::select("B", ["One", "Two"], 0)])]),
+                content: ContentBlueprint::new("One").with_sections(vec![
+                    ContentSection::new("概览").with_blocks(vec![ContentBlock::select(
+                        "B",
+                        ["One", "Two"],
+                        0,
+                    )]),
+                ]),
             }],
         );
 
@@ -487,9 +497,10 @@ mod tests {
             },
             vec![ShowcaseScreen {
                 title: "One".to_string(),
-                content: ContentBlueprint::new("One")
-                    .with_sections(vec![ContentSection::new("概览")
-                        .with_blocks(vec![ContentBlock::text_input("Name", "", "输入")])]),
+                content: ContentBlueprint::new("One").with_sections(vec![
+                    ContentSection::new("概览")
+                        .with_blocks(vec![ContentBlock::text_input("Name", "", "输入")]),
+                ]),
             }],
         );
 

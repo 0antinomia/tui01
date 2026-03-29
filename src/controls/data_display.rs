@@ -62,7 +62,11 @@ impl ControlTrait for DataDisplayControl {
             y,
             format!("{icon} {text}"),
             area.width.saturating_sub(2) as usize,
-            Style::default().fg(if self.dynamic { Color::Cyan } else { Color::White }),
+            Style::default().fg(if self.dynamic {
+                Color::Cyan
+            } else {
+                Color::White
+            }),
         );
     }
 
@@ -91,7 +95,7 @@ impl ControlTrait for DataDisplayControl {
     }
 
     fn box_eq(&self, other: &dyn ControlTrait) -> bool {
-        other.as_any().downcast_ref::<Self>().map_or(false, |o| self == o)
+        other.as_any().downcast_ref::<Self>() == Some(self)
     }
 
     fn as_any(&self) -> &dyn Any {

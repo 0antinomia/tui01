@@ -64,7 +64,10 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: AnyControl::Builtin(BuiltinControl::TextInput(TextInputControl::new(value, placeholder))),
+            control: AnyControl::Builtin(BuiltinControl::TextInput(TextInputControl::new(
+                value,
+                placeholder,
+            ))),
             height_units: 1,
             operation: None,
         }
@@ -78,7 +81,9 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: AnyControl::Builtin(BuiltinControl::Select(SelectControl::new(options, selected))),
+            control: AnyControl::Builtin(BuiltinControl::Select(SelectControl::new(
+                options, selected,
+            ))),
             height_units: 1,
             operation: None,
         }
@@ -102,7 +107,10 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: AnyControl::Builtin(BuiltinControl::NumberInput(NumberInputControl::new(value, placeholder))),
+            control: AnyControl::Builtin(BuiltinControl::NumberInput(NumberInputControl::new(
+                value,
+                placeholder,
+            ))),
             height_units: 1,
             operation: None,
         }
@@ -112,7 +120,9 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: AnyControl::Builtin(BuiltinControl::ActionButton(ActionButtonControl::new(button_label))),
+            control: AnyControl::Builtin(BuiltinControl::ActionButton(ActionButtonControl::new(
+                button_label,
+            ))),
             height_units: 1,
             operation: None,
         }
@@ -122,7 +132,9 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: AnyControl::Builtin(BuiltinControl::ActionButton(ActionButtonControl::refresh(button_label))),
+            control: AnyControl::Builtin(BuiltinControl::ActionButton(
+                ActionButtonControl::refresh(button_label),
+            )),
             height_units: 1,
             operation: None,
         }
@@ -132,7 +144,9 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: AnyControl::Builtin(BuiltinControl::StaticData(DataDisplayControl::new(value))),
+            control: AnyControl::Builtin(BuiltinControl::StaticData(DataDisplayControl::new(
+                value,
+            ))),
             height_units: 1,
             operation: None,
         }
@@ -142,7 +156,9 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: AnyControl::Builtin(BuiltinControl::DynamicData(DataDisplayControl::new_dynamic(value))),
+            control: AnyControl::Builtin(BuiltinControl::DynamicData(
+                DataDisplayControl::new_dynamic(value),
+            )),
             height_units: 1,
             operation: None,
         }
@@ -165,7 +181,9 @@ impl ContentBlock {
         Self {
             id: None,
             label: label.into(),
-            control: AnyControl::Builtin(BuiltinControl::LogOutput(LogOutputControl::from_file(path))),
+            control: AnyControl::Builtin(BuiltinControl::LogOutput(LogOutputControl::from_file(
+                path,
+            ))),
             height_units: 4,
             operation: None,
         }
@@ -454,8 +472,13 @@ impl ContentSection {
         value: RuntimeSection,
         registry: Option<&crate::host::ControlRegistry>,
     ) -> Self {
-        ContentSection::new(value.title)
-            .with_blocks(value.fields.into_iter().map(|f| ContentBlock::from_runtime_field(f, registry)).collect())
+        ContentSection::new(value.title).with_blocks(
+            value
+                .fields
+                .into_iter()
+                .map(|f| ContentBlock::from_runtime_field(f, registry))
+                .collect(),
+        )
     }
 }
 
@@ -500,14 +523,16 @@ impl ContentBlock {
             } => {
                 let mut block = ContentBlock::log_output(value.label, content);
                 if let Some(path) = file_source {
-                    block.control = AnyControl::Builtin(BuiltinControl::LogOutput(LogOutputControl::from_file(path)));
+                    block.control = AnyControl::Builtin(BuiltinControl::LogOutput(
+                        LogOutputControl::from_file(path),
+                    ));
                 }
-                if let AnyControl::Builtin(BuiltinControl::LogOutput(control)) = &mut block.control {
-                    if let Some(limit) = tail_lines {
-                        control.set_tail_lines(limit);
-                        if control.file_source().is_some() {
-                            control.refresh_from_file();
-                        }
+                if let AnyControl::Builtin(BuiltinControl::LogOutput(control)) = &mut block.control
+                    && let Some(limit) = tail_lines
+                {
+                    control.set_tail_lines(limit);
+                    if control.file_source().is_some() {
+                        control.refresh_from_file();
                     }
                 }
                 block
@@ -557,12 +582,10 @@ impl From<RuntimeField> for ContentBlock {
 #[cfg(test)]
 mod tests {
     use super::{
-        AnyControl, BuiltinControl, ContentBlock, ContentBlueprint, ContentRuntimeState, ContentSection,
-        OperationSource, OperationStatus, RuntimeControl, RuntimeField, RuntimeOperation,
-        RuntimePage, RuntimeSection,
+        AnyControl, BuiltinControl, ContentBlock, ContentBlueprint, ContentRuntimeState,
+        ContentSection, OperationSource, OperationStatus, RuntimeControl, RuntimeField,
+        RuntimeOperation, RuntimePage, RuntimeSection,
     };
-    use crate::controls::TextInputControl;
-
     #[test]
     fn runtime_page_converts_to_content_blueprint() {
         let runtime = RuntimePage {
@@ -592,7 +615,9 @@ mod tests {
             Some("project_name")
         );
         match &blueprint.sections[0].blocks[0].control {
-            AnyControl::Builtin(BuiltinControl::TextInput(control)) => assert_eq!(control.value, "tui01"),
+            AnyControl::Builtin(BuiltinControl::TextInput(control)) => {
+                assert_eq!(control.value, "tui01")
+            }
             _ => panic!("expected text input"),
         }
         assert!(blueprint.sections[0].blocks[0].operation.is_some());
@@ -600,11 +625,12 @@ mod tests {
 
     #[test]
     fn content_runtime_state_tracks_block_count() {
-        let blueprint = ContentBlueprint::new("Root").with_sections(vec![ContentSection::new("A")
-            .with_blocks(vec![
+        let blueprint = ContentBlueprint::new("Root").with_sections(vec![
+            ContentSection::new("A").with_blocks(vec![
                 ContentBlock::toggle("one", true),
                 ContentBlock::toggle("two", false),
-            ])]);
+            ]),
+        ]);
 
         let state = ContentRuntimeState::from_blueprint(&blueprint);
         assert_eq!(state.field_states.len(), 2);
@@ -624,7 +650,9 @@ mod tests {
         let field = RuntimeField {
             id: None,
             label: "自定义".to_string(),
-            control: RuntimeControl::Custom { control_name: "slider".to_string() },
+            control: RuntimeControl::Custom {
+                control_name: "slider".to_string(),
+            },
             height_units: 1,
             operation: None,
         };

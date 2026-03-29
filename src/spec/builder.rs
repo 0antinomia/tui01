@@ -2,12 +2,12 @@
 
 use crate::schema::{PageSpec, SectionSpec};
 use crate::showcase::{ShowcaseApp, ShowcaseCopy, ShowcaseScreen};
+use crate::theme::{LayoutStrategy, Theme};
 use crate::{
-    host::{ActionRegistry, RuntimeHost},
     controls::{AnyControl, BuiltinControl},
+    host::{ActionRegistry, RuntimeHost},
     runtime::OperationSource,
 };
-use crate::theme::{LayoutStrategy, Theme};
 use std::collections::{HashMap, HashSet};
 
 /// 使用标题开始定义一个页面。
@@ -170,7 +170,10 @@ impl AppSpec {
             for section in &screen.content.sections {
                 for block in &section.blocks {
                     if let Some(id) = &block.id {
-                        let is_log = matches!(block.control, AnyControl::Builtin(BuiltinControl::LogOutput(_)));
+                        let is_log = matches!(
+                            block.control,
+                            AnyControl::Builtin(BuiltinControl::LogOutput(_))
+                        );
                         if ids.insert(id.clone(), is_log).is_some() {
                             return Err(AppValidationError::DuplicateFieldId(id.clone()));
                         }
@@ -204,13 +207,13 @@ impl AppSpec {
                             }
                         }
 
-                        if let OperationSource::RegisteredAction(action) = &operation.source {
-                            if !actions.contains(action) {
-                                return Err(AppValidationError::UnknownRegisteredAction {
-                                    source_field,
-                                    action: action.clone(),
-                                });
-                            }
+                        if let OperationSource::RegisteredAction(action) = &operation.source
+                            && !actions.contains(action)
+                        {
+                            return Err(AppValidationError::UnknownRegisteredAction {
+                                source_field,
+                                action: action.clone(),
+                            });
                         }
                     }
                 }
@@ -225,10 +228,10 @@ impl AppSpec {
         for screen in &self.screens {
             for section in &screen.content.sections {
                 for block in &section.blocks {
-                    if let Some(operation) = &block.operation {
-                        if let OperationSource::RegisteredAction(action) = &operation.source {
-                            names.push(action.clone());
-                        }
+                    if let Some(operation) = &block.operation
+                        && let OperationSource::RegisteredAction(action) = &operation.source
+                    {
+                        names.push(action.clone());
                     }
                 }
             }
@@ -336,9 +339,9 @@ impl Default for AppSpec {
 
 #[cfg(test)]
 mod tests {
-    use super::{page, screen, section, AppSpec, AppValidationError};
-    use crate::host::{ActionOutcome, ActionRegistry};
+    use super::{AppSpec, AppValidationError, page, screen, section};
     use crate::host::RuntimeHost;
+    use crate::host::{ActionOutcome, ActionRegistry};
     use crate::schema::FieldSpec;
 
     #[test]

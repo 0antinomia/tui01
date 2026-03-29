@@ -2,7 +2,9 @@
 
 use super::ContentPanel;
 use crate::controls::{AnyControl, BuiltinControl};
-use crate::host::executor::{OperationRequest, OperationResult, OperationSource as ExecutorOperationSource};
+use crate::host::executor::{
+    OperationRequest, OperationResult, OperationSource as ExecutorOperationSource,
+};
 use crate::runtime::{ContentBlock, OperationSource, OperationStatus};
 use std::collections::HashMap;
 
@@ -25,7 +27,10 @@ pub(super) fn assert_dual_state_consistency(panel: &ContentPanel) {
 }
 
 /// set_blueprint 的实现逻辑，从 facade 委托调用。
-pub(super) fn set_blueprint_impl(panel: &mut ContentPanel, blueprint: crate::runtime::ContentBlueprint) {
+pub(super) fn set_blueprint_impl(
+    panel: &mut ContentPanel,
+    blueprint: crate::runtime::ContentBlueprint,
+) {
     let content_changed = panel.blueprint != blueprint;
     panel.blueprint = blueprint;
 
@@ -81,14 +86,14 @@ fn operation_params(panel: &ContentPanel) -> HashMap<String, String> {
 
     for section in &panel.blueprint.sections {
         for block in &section.blocks {
-            if let Some(id) = &block.id {
-                if let Some(control) = panel.block_control(index) {
-                    let value = control.value();
-                    params.insert(id.clone(), value.clone());
-                    params.insert(format!("screen.{id}"), value.clone());
-                    if !page_scope.is_empty() {
-                        params.insert(format!("{page_scope}.{id}"), value);
-                    }
+            if let Some(id) = &block.id
+                && let Some(control) = panel.block_control(index)
+            {
+                let value = control.value();
+                params.insert(id.clone(), value.clone());
+                params.insert(format!("screen.{id}"), value.clone());
+                if !page_scope.is_empty() {
+                    params.insert(format!("{page_scope}.{id}"), value);
                 }
             }
             index += 1;
@@ -103,16 +108,21 @@ pub(super) fn apply_operation_result(panel: &mut ContentPanel, result: &Operatio
 
     apply_operation_result_to_block(panel, result.block_index, result);
 
-    if let Some(target_id) = result.result_target.as_deref() {
-        if let Some(AnyControl::Builtin(BuiltinControl::LogOutput(log))) = panel.block_control_mut_by_id(target_id) {
-            log.append_entry(format_result_output(result));
-        }
+    if let Some(target_id) = result.result_target.as_deref()
+        && let Some(AnyControl::Builtin(BuiltinControl::LogOutput(log))) =
+            panel.block_control_mut_by_id(target_id)
+    {
+        log.append_entry(format_result_output(result));
     }
 
     assert_dual_state_consistency(panel);
 }
 
-fn apply_operation_result_to_block(panel: &mut ContentPanel, target_index: usize, result: &OperationResult) {
+fn apply_operation_result_to_block(
+    panel: &mut ContentPanel,
+    target_index: usize,
+    result: &OperationResult,
+) {
     let Some(state) = panel.block_state(target_index).cloned() else {
         return;
     };

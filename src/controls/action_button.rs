@@ -9,7 +9,9 @@ use ratatui::{
 };
 
 use super::control_trait::ControlTrait;
-use super::helpers::{framed_block, left_aligned_control_rect, render_feedback_marker, truncate_to_chars};
+use super::helpers::{
+    framed_block, left_aligned_control_rect, render_feedback_marker, truncate_to_chars,
+};
 use crate::theme::RenderContext;
 use std::any::Any;
 
@@ -109,7 +111,7 @@ impl ControlTrait for ActionButtonControl {
     }
 
     fn box_eq(&self, other: &dyn ControlTrait) -> bool {
-        other.as_any().downcast_ref::<Self>().map_or(false, |o| self == o)
+        other.as_any().downcast_ref::<Self>() == Some(self)
     }
 
     fn as_any(&self) -> &dyn Any {

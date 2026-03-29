@@ -1,7 +1,7 @@
 //! 宿主侧运行时接入面。
 
-use crate::controls::ControlTrait;
 use super::executor::{ActionContext, ActionOutcome, ActionRegistry};
+use crate::controls::ControlTrait;
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -208,7 +208,8 @@ impl RuntimeHost {
         name: impl Into<String>,
         factory: impl Fn() -> Box<dyn ControlTrait> + Send + Sync + 'static,
     ) {
-        self.control_registry.register(name.into(), Arc::new(factory));
+        self.control_registry
+            .register(name.into(), Arc::new(factory));
     }
 
     /// 获取控件注册表的引用。
@@ -432,21 +433,22 @@ mod tests {
             .allow_env_key("APP_MODE");
 
         assert_eq!(host.execution_policy().allowed_working_dirs().len(), 1);
-        assert!(host
-            .execution_policy()
-            .allowed_env_keys()
-            .unwrap()
-            .contains("APP_ENV"));
-        assert!(host
-            .execution_policy()
-            .allowed_env_keys()
-            .unwrap()
-            .contains("APP_MODE"));
+        assert!(
+            host.execution_policy()
+                .allowed_env_keys()
+                .unwrap()
+                .contains("APP_ENV")
+        );
+        assert!(
+            host.execution_policy()
+                .allowed_env_keys()
+                .unwrap()
+                .contains("APP_MODE")
+        );
     }
 
     #[test]
     fn control_registry_registers_and_creates() {
-        use crate::controls::ControlTrait;
         use crate::controls::TextInputControl;
 
         let mut host = RuntimeHost::new();

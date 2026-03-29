@@ -11,14 +11,13 @@ pub(super) fn validate_request_permissions(
     allowed_working_dirs: &[String],
     allowed_env_keys: Option<&HashSet<String>>,
 ) -> Option<String> {
-    if let Some(cwd) = cwd {
-        if !allowed_working_dirs.is_empty()
-            && !allowed_working_dirs
-                .iter()
-                .any(|allowed| Path::new(cwd).starts_with(Path::new(allowed)))
-        {
-            return Some(format!("working directory is not allowed: {cwd}"));
-        }
+    if let Some(cwd) = cwd
+        && !allowed_working_dirs.is_empty()
+        && !allowed_working_dirs
+            .iter()
+            .any(|allowed| Path::new(cwd).starts_with(Path::new(allowed)))
+    {
+        return Some(format!("working directory is not allowed: {cwd}"));
     }
 
     if let Some(allowed) = allowed_env_keys {

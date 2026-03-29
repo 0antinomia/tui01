@@ -1,8 +1,8 @@
 //! 内容面板交互：键盘处理、导航和控件激活。
 
+use super::ContentPanel;
 use super::layout::{SelectedControlKind, current_page_block_indices};
 use super::operations;
-use super::ContentPanel;
 use crate::controls::AnyControl;
 use crate::host::executor::OperationRequest;
 use crate::infra::event::Key;
@@ -14,7 +14,12 @@ fn handle_control_key(control: &mut AnyControl, key: Key) -> bool {
 pub(super) fn handle_panel_control_key(panel: &mut ContentPanel, key: Key) -> bool {
     if panel
         .selected_block_state()
-        .map(|state| matches!(state.status, crate::runtime::OperationStatus::Running { .. }))
+        .map(|state| {
+            matches!(
+                state.status,
+                crate::runtime::OperationStatus::Running { .. }
+            )
+        })
         .unwrap_or(false)
     {
         return false;
@@ -56,10 +61,12 @@ pub(super) fn activate_panel_selected_control(
         }
         Some(SelectedControlKind::StaticData | SelectedControlKind::DynamicData) | None => None,
         Some(SelectedControlKind::Custom) => {
-            let is_editable = panel.selected_block_control_mut()
+            let is_editable = panel
+                .selected_block_control_mut()
                 .map(|c| c.is_editable())
                 .unwrap_or(false);
-            let triggers = panel.selected_block_control_mut()
+            let triggers = panel
+                .selected_block_control_mut()
                 .map(|c| c.triggers_on_activate())
                 .unwrap_or(false);
 
@@ -90,10 +97,10 @@ pub(super) fn confirm_panel_control(
 }
 
 pub(super) fn cancel_panel_control(panel: &mut ContentPanel) {
-    if let Some(state) = panel.selected_block_state_mut() {
-        if let Some(snapshot) = state.snapshot.take() {
-            state.control = snapshot;
-        }
+    if let Some(state) = panel.selected_block_state_mut()
+        && let Some(snapshot) = state.snapshot.take()
+    {
+        state.control = snapshot;
     }
     panel.control_active = false;
 }
@@ -220,7 +227,14 @@ fn toggle_selected_control(
 
     if block.operation.is_some() {
         let original = panel.block_control(block_index)?.clone();
-        operations::start_operation(panel, operation_id, screen_index, block_index, original, pending)
+        operations::start_operation(
+            panel,
+            operation_id,
+            screen_index,
+            block_index,
+            original,
+            pending,
+        )
     } else {
         if let Some(control) = panel.block_control_mut(block_index) {
             *control = pending;
@@ -252,16 +266,33 @@ fn start_selected_action(
 }
 
 fn selected_control_kind(panel: &ContentPanel) -> Option<SelectedControlKind> {
-    panel.block_control(panel.runtime.selected_block)
+    panel
+        .block_control(panel.runtime.selected_block)
         .map(|control| match control {
-            AnyControl::Builtin(crate::controls::BuiltinControl::TextInput(_)) => SelectedControlKind::TextInput,
-            AnyControl::Builtin(crate::controls::BuiltinControl::NumberInput(_)) => SelectedControlKind::NumberInput,
-            AnyControl::Builtin(crate::controls::BuiltinControl::Select(_)) => SelectedControlKind::Select,
-            AnyControl::Builtin(crate::controls::BuiltinControl::Toggle(_)) => SelectedControlKind::Toggle,
-            AnyControl::Builtin(crate::controls::BuiltinControl::ActionButton(_)) => SelectedControlKind::ActionButton,
-            AnyControl::Builtin(crate::controls::BuiltinControl::StaticData(_)) => SelectedControlKind::StaticData,
-            AnyControl::Builtin(crate::controls::BuiltinControl::DynamicData(_)) => SelectedControlKind::DynamicData,
-            AnyControl::Builtin(crate::controls::BuiltinControl::LogOutput(_)) => SelectedControlKind::LogOutput,
+            AnyControl::Builtin(crate::controls::BuiltinControl::TextInput(_)) => {
+                SelectedControlKind::TextInput
+            }
+            AnyControl::Builtin(crate::controls::BuiltinControl::NumberInput(_)) => {
+                SelectedControlKind::NumberInput
+            }
+            AnyControl::Builtin(crate::controls::BuiltinControl::Select(_)) => {
+                SelectedControlKind::Select
+            }
+            AnyControl::Builtin(crate::controls::BuiltinControl::Toggle(_)) => {
+                SelectedControlKind::Toggle
+            }
+            AnyControl::Builtin(crate::controls::BuiltinControl::ActionButton(_)) => {
+                SelectedControlKind::ActionButton
+            }
+            AnyControl::Builtin(crate::controls::BuiltinControl::StaticData(_)) => {
+                SelectedControlKind::StaticData
+            }
+            AnyControl::Builtin(crate::controls::BuiltinControl::DynamicData(_)) => {
+                SelectedControlKind::DynamicData
+            }
+            AnyControl::Builtin(crate::controls::BuiltinControl::LogOutput(_)) => {
+                SelectedControlKind::LogOutput
+            }
             AnyControl::Custom(_) => SelectedControlKind::Custom,
         })
 }

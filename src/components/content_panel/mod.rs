@@ -1,22 +1,19 @@
 //! 右下内容区域组件
 
-mod layout;
-mod render;
 mod interaction;
+mod layout;
 mod operations;
+mod render;
 
 use crate::components::Component;
 use crate::controls::{AnyControl, BuiltinControl};
-use crate::infra::event::Key;
 use crate::host::executor::{OperationRequest, OperationResult};
+use crate::infra::event::Key;
 use crate::runtime::{
     ContentBlock, ContentBlueprint, ContentRuntimeState, OperationStatus, RuntimeFieldState,
 };
 use crate::theme::Theme;
-use ratatui::{
-    layout::Rect,
-    Frame,
-};
+use ratatui::{Frame, layout::Rect};
 
 #[cfg(test)]
 use ratatui::style::Color;
@@ -129,10 +126,10 @@ impl ContentPanel {
 
     fn refresh_file_logs(&mut self) {
         for state in &mut self.runtime.field_states {
-            if let AnyControl::Builtin(BuiltinControl::LogOutput(control)) = &mut state.control {
-                if control.file_source().is_some() {
-                    control.refresh_from_file();
-                }
+            if let AnyControl::Builtin(BuiltinControl::LogOutput(control)) = &mut state.control
+                && control.file_source().is_some()
+            {
+                control.refresh_from_file();
             }
         }
     }
@@ -212,14 +209,30 @@ impl ContentPanel {
     fn selected_control_kind(&self) -> Option<layout::SelectedControlKind> {
         self.block_control(self.runtime.selected_block)
             .map(|control| match control {
-                AnyControl::Builtin(BuiltinControl::TextInput(_)) => layout::SelectedControlKind::TextInput,
-                AnyControl::Builtin(BuiltinControl::NumberInput(_)) => layout::SelectedControlKind::NumberInput,
-                AnyControl::Builtin(BuiltinControl::Select(_)) => layout::SelectedControlKind::Select,
-                AnyControl::Builtin(BuiltinControl::Toggle(_)) => layout::SelectedControlKind::Toggle,
-                AnyControl::Builtin(BuiltinControl::ActionButton(_)) => layout::SelectedControlKind::ActionButton,
-                AnyControl::Builtin(BuiltinControl::StaticData(_)) => layout::SelectedControlKind::StaticData,
-                AnyControl::Builtin(BuiltinControl::DynamicData(_)) => layout::SelectedControlKind::DynamicData,
-                AnyControl::Builtin(BuiltinControl::LogOutput(_)) => layout::SelectedControlKind::LogOutput,
+                AnyControl::Builtin(BuiltinControl::TextInput(_)) => {
+                    layout::SelectedControlKind::TextInput
+                }
+                AnyControl::Builtin(BuiltinControl::NumberInput(_)) => {
+                    layout::SelectedControlKind::NumberInput
+                }
+                AnyControl::Builtin(BuiltinControl::Select(_)) => {
+                    layout::SelectedControlKind::Select
+                }
+                AnyControl::Builtin(BuiltinControl::Toggle(_)) => {
+                    layout::SelectedControlKind::Toggle
+                }
+                AnyControl::Builtin(BuiltinControl::ActionButton(_)) => {
+                    layout::SelectedControlKind::ActionButton
+                }
+                AnyControl::Builtin(BuiltinControl::StaticData(_)) => {
+                    layout::SelectedControlKind::StaticData
+                }
+                AnyControl::Builtin(BuiltinControl::DynamicData(_)) => {
+                    layout::SelectedControlKind::DynamicData
+                }
+                AnyControl::Builtin(BuiltinControl::LogOutput(_)) => {
+                    layout::SelectedControlKind::LogOutput
+                }
                 AnyControl::Custom(_) => layout::SelectedControlKind::Custom,
             })
     }
@@ -387,11 +400,10 @@ mod tests {
     #[test]
     fn content_panel_truncates_page_label_to_ten_chars() {
         let mut panel = ContentPanel::new();
-        panel.set_blueprint(
-            ContentBlueprint::new("Root")
-                .with_sections(vec![ContentSection::new("一个超过十个字符的子标题名称")
-                    .with_blocks(vec![ContentBlock::static_data("描述", "value")])]),
-        );
+        panel.set_blueprint(ContentBlueprint::new("Root").with_sections(vec![
+                ContentSection::new("一个超过十个字符的子标题名称")
+                    .with_blocks(vec![ContentBlock::static_data("描述", "value")]),
+            ]));
 
         let label = panel.truncated_page_label(6, 0, 32);
         assert_eq!(label.chars().count(), 10);
@@ -401,10 +413,10 @@ mod tests {
     #[test]
     fn content_panel_shows_pagination_gutter_for_single_page() {
         let mut panel = ContentPanel::new();
-        panel.set_blueprint(
-            ContentBlueprint::new("Root").with_sections(vec![ContentSection::new("概览")
-                .with_blocks(vec![ContentBlock::static_data("One", "value")])]),
-        );
+        panel.set_blueprint(ContentBlueprint::new("Root").with_sections(vec![
+                ContentSection::new("概览")
+                    .with_blocks(vec![ContentBlock::static_data("One", "value")]),
+            ]));
 
         let glyphs: Vec<char> = panel
             .pagination_rows(8)
@@ -421,12 +433,16 @@ mod tests {
 
         let cells = panel.pagination_rows(7);
 
-        assert!(cells
-            .iter()
-            .any(|(glyph, color, _)| *glyph == '\u{2503}' && *color == Color::White));
-        assert!(cells
-            .iter()
-            .any(|(glyph, color, _)| *glyph == '\u{2502}' && *color == Color::Rgb(170, 170, 170)));
+        assert!(
+            cells
+                .iter()
+                .any(|(glyph, color, _)| *glyph == '\u{2503}' && *color == Color::White)
+        );
+        assert!(
+            cells.iter().any(
+                |(glyph, color, _)| *glyph == '\u{2502}' && *color == Color::Rgb(170, 170, 170)
+            )
+        );
     }
 
     #[test]
@@ -494,7 +510,9 @@ mod tests {
         assert!(panel.handle_control_key(crate::event::Key::Char('x')));
 
         match &panel.blueprint().sections[0].blocks[0].control {
-            super::AnyControl::Builtin(super::BuiltinControl::TextInput(control)) => assert_eq!(control.value, "demox"),
+            super::AnyControl::Builtin(super::BuiltinControl::TextInput(control)) => {
+                assert_eq!(control.value, "demox")
+            }
             _ => panic!("expected text input"),
         }
     }
@@ -508,7 +526,9 @@ mod tests {
         assert!(!panel.is_control_active());
 
         match &panel.blueprint().sections[0].blocks[1].control {
-            super::AnyControl::Builtin(super::BuiltinControl::Toggle(control)) => assert!(!control.on),
+            super::AnyControl::Builtin(super::BuiltinControl::Toggle(control)) => {
+                assert!(!control.on)
+            }
             _ => panic!("expected toggle"),
         }
     }
@@ -525,7 +545,9 @@ mod tests {
         assert!(!panel.handle_control_key(crate::event::Key::Char('x')));
 
         match &panel.blueprint().sections[1].blocks[1].control {
-            super::AnyControl::Builtin(super::BuiltinControl::NumberInput(control)) => assert_eq!(control.value, "80809"),
+            super::AnyControl::Builtin(super::BuiltinControl::NumberInput(control)) => {
+                assert_eq!(control.value, "80809")
+            }
             _ => panic!("expected number input"),
         }
     }
@@ -541,7 +563,9 @@ mod tests {
         panel.cancel_control();
 
         match &panel.blueprint().sections[1].blocks[0].control {
-            super::AnyControl::Builtin(super::BuiltinControl::Select(control)) => assert_eq!(control.selected, 0),
+            super::AnyControl::Builtin(super::BuiltinControl::Select(control)) => {
+                assert_eq!(control.selected, 0)
+            }
             _ => panic!("expected select"),
         }
         assert!(!panel.is_control_active());
@@ -616,7 +640,9 @@ mod tests {
         });
 
         match &panel.blueprint().sections[0].blocks[1].control {
-            super::AnyControl::Builtin(super::BuiltinControl::LogOutput(log)) => assert!(log.content.contains("done")),
+            super::AnyControl::Builtin(super::BuiltinControl::LogOutput(log)) => {
+                assert!(log.content.contains("done"))
+            }
             _ => panic!("expected log output"),
         }
     }

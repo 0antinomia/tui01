@@ -158,7 +158,7 @@ impl ControlTrait for ToggleControl {
     }
 
     fn box_eq(&self, other: &dyn ControlTrait) -> bool {
-        other.as_any().downcast_ref::<Self>().map_or(false, |o| self == o)
+        other.as_any().downcast_ref::<Self>() == Some(self)
     }
 
     fn as_any(&self) -> &dyn Any {
