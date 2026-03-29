@@ -25,6 +25,8 @@ Thumbs.db
 .claude/
 .codex/
 .planning/
+scripts/
+fixtures/
 
 # Runtime log
 .tui01/
