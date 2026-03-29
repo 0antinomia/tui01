@@ -10,6 +10,8 @@
 - 将主题与布局扩展点正式纳入公开能力，提供 `Theme`、`RenderContext` 和 `LayoutStrategy`
 - 将应用壳层、内容区和执行器按职责拆分为子模块，保留原有行为与交互语义
 - README 和接入文档已同步更新到重构后的真实结构与推荐入口
+- 项目工具链切换到 Rust 2024 edition，并通过 `rust-toolchain.toml` 固定构建环境
+- 增加 `rustfmt.toml`，统一代码格式化行为
 
 ## 0.1.0
 
