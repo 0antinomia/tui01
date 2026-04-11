@@ -2,6 +2,3 @@
 
 pub mod event;
 pub mod tui;
-
-pub use event::{Event, EventHandler, Key};
-pub use tui::Tui;

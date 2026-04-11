@@ -59,13 +59,9 @@ impl MenuState {
     }
 
     /// 获取当前页码，从 0 开始。
+    #[cfg(test)]
     pub fn current_page(&self) -> usize {
         self.current_page
-    }
-
-    /// 获取每页项数。
-    pub fn items_per_page(&self) -> usize {
-        self.items_per_page
     }
 
     /// 根据每页项数计算总页数。
@@ -211,11 +207,13 @@ impl MenuComponent {
     }
 
     /// 获取菜单状态的只读引用。
+    #[cfg(test)]
     pub fn state(&self) -> &MenuState {
         &self.state
     }
 
     /// 获取菜单状态的可变引用。
+    #[cfg(test)]
     pub fn state_mut(&mut self) -> &mut MenuState {
         &mut self.state
     }

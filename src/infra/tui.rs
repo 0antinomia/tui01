@@ -63,31 +63,6 @@ pub fn init_panic_hook() {
     }));
 }
 
-/// 检查终端是否满足最小尺寸要求
-/// 如果太小或宽高比异常，返回 Err 并附带错误信息
-pub fn check_minimum_size() -> Result<(), String> {
-    let (width, height) = terminal_size().map_err(|e| format!("无法获取终端尺寸: {}", e))?;
-
-    if width < MIN_WIDTH || height < MIN_HEIGHT {
-        Err(format!("终端太小（最小需要 {}x{}，当前 {}x{}）", MIN_WIDTH, MIN_HEIGHT, width, height))
-    } else {
-        let aspect_ratio = width as f64 / height as f64;
-        if aspect_ratio < MIN_ASPECT_RATIO {
-            Err(format!(
-                "终端过窄（宽高比 {:.2}，最小需要 {:.2}，当前 {}x{}）",
-                aspect_ratio, MIN_ASPECT_RATIO, width, height
-            ))
-        } else if aspect_ratio > MAX_ASPECT_RATIO {
-            Err(format!(
-                "终端过宽（宽高比 {:.2}，最大允许 {:.2}，当前 {}x{}）",
-                aspect_ratio, MAX_ASPECT_RATIO, width, height
-            ))
-        } else {
-            Ok(())
-        }
-    }
-}
-
 /// 获取当前终端尺寸。
 pub fn terminal_size() -> io::Result<(u16, u16)> {
     crossterm::terminal::size()

@@ -192,10 +192,6 @@ impl ContentPanel {
         interaction::select_previous_block(self, height)
     }
 
-    pub fn has_multiple_pages(&self, width: u16, height: u16) -> bool {
-        self.total_pages(width, height) > 1
-    }
-
     pub fn total_pages(&self, _width: u16, height: u16) -> usize {
         layout::layout_pages(self, layout::effective_height(self, height)).len().max(1)
     }
