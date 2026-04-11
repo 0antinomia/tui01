@@ -38,7 +38,7 @@ async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     let host = build_host();
-    AppSpec::new()
+    let app = AppSpec::new()
         .title_text("Host Template\n\nRust-native host integration example.")
         .status_controls(
             "Controls:\n↑/↓ 或 j/k 当前焦点内移动\nShift+J/K 当前焦点区域翻页\nEnter / l 进入或确认\nEsc / h 返回\nq 退出",
@@ -74,5 +74,6 @@ async fn main() -> color_eyre::Result<()> {
         ))
         .try_into_showcase_app_with_host(host)
         .map_err(|err| color_eyre::eyre::eyre!("invalid app spec: {}", err))?;
-    Ok(())
+
+    app.run().await
 }

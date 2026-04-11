@@ -148,6 +148,29 @@ impl ShowcaseApp {
         tea_core::handle_event(self, event)
     }
 
+    pub async fn run(mut self) -> color_eyre::Result<()> {
+        tui::init_panic_hook();
+        let mut terminal = tui::Tui::new()?;
+        let mut events = crate::event::EventHandler::new();
+
+        let run_result: color_eyre::Result<()> = async {
+            while self.running {
+                terminal.draw(|frame| self.render(frame))?;
+                let Some(event) = events.next().await else {
+                    break;
+                };
+                self.handle_event(event);
+            }
+
+            Ok(())
+        }
+        .await;
+
+        let exit_result = terminal.exit();
+        run_result?;
+        exit_result
+    }
+
     pub fn render(&mut self, frame: &mut ratatui::Frame) {
         if let Some(ref error) = self.size_error {
             self.render_size_error(frame, error);

@@ -76,6 +76,7 @@ let mut app = AppSpec::new()
     .try_into_showcase_app_with_host(host)?;
 
 app.validate_registered_actions()?;
+app.run().await?;
 ```
 
 完整可运行版本可直接看：
